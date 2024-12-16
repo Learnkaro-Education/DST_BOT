@@ -10,10 +10,13 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "axios": "^1.7.9",
+    "cloudinary": "^2.5.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "env": "^0.0.2",
     "express": "^4.21.2",
-    "grammy": "^1.33.0"
+    "grammy": "^1.33.0",
+    "multer": "^1.4.5-lts.1"
   }
 }
