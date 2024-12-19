@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const spinner = document.getElementById("spinner");
   const rowsContainer = document.getElementById("rowsContainer");
   const addRowBtn = document.getElementById("addRowBtn");
-  const basedURL = "http://localhost:3000";
+  const basedURL = "https://dst-bot-ff9l.onrender.com";
 
   // Initialize Quill.js
   const quill = new Quill("#quill-editor", {
