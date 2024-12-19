@@ -14,7 +14,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 const token = process.env.BOT_TOKEN;
 const channelId = process.env.CHANNEL_ID;
-
+const key = process.env.PASSWORD;
 if (!token || !channelId) {
   console.error("BOT_TOKEN and CHANNEL_ID are required in the .env file.");
   process.exit(1);
@@ -99,9 +99,15 @@ bot.command("start", async (ctx) => {
 // Endpoint to send messages
 app.post("/send-message", upload.single("image"), async (req, res) => {
   try {
-    const { caption, buttons } = req.body;
+    const { caption, buttons, password } = req.body;
     const sanitizedCaption = caption ? sanitizeHTMLForTelegram(caption) : null;
+    console.log(password);
+    console.log(key);
 
+    if (key !== password) {
+      console.log("cannot send message");
+      return res.status(403).json({ message: "unauthorized User" });
+    }
     let parsedButtons = [];
     if (buttons) {
       try {

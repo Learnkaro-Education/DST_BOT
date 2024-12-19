@@ -84,4 +84,24 @@ h2 {
   justify-content: center;
   z-index: 1050;
 }
+#passwordInput {
+  background-color: #f8f9fa; /* Light background */
+  border: 1px solid #ccc; /* Border with subtle color */
+  border-radius: 0.375rem; /* Rounded corners */
+  padding: 10px; /* Padding for better user experience */
+  font-size: 16px; /* Appropriate font size */
+}
 
+#passwordInput:focus {
+  border-color: #007bff; /* Border color changes when focused */
+  outline: none; /* Remove default outline */
+}
+
+.form-label {
+  font-weight: 600; /* Label styling */
+  margin-bottom: 5px; /* Space below the label */
+}
+
+.mb-3 {
+  margin-bottom: 1rem; /* Consistent spacing for form controls */
+}

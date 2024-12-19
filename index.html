@@ -8,7 +8,10 @@
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css"
       rel="stylesheet"
     />
-    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet" />
+    <link
+      href="https://cdn.quilljs.com/1.3.6/quill.snow.css"
+      rel="stylesheet"
+    />
     <link
       rel="stylesheet"
       type="text/css"
@@ -17,7 +20,7 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div id="spinner" class="spinner-overlay" style="display: none;">
+    <div id="spinner" class="spinner-overlay" style="display: none">
       <div class="spinner-border text-primary" role="status">
         <span class="visually-hidden">Loading...</span>
       </div>
@@ -32,10 +35,12 @@
             <label for="messageInput" class="form-label">Enter Caption</label>
             <div id="quill-editor"></div>
           </div>
+
           <div class="mb-3">
             <label for="imageInput" class="form-label">Upload Image</label>
             <input type="file" id="imageInput" class="form-control" />
           </div>
+
           <div class="add-button">
             <h3 class="mb-3">Buttons</h3>
             <div class="add-row-btn mb-3">
@@ -44,7 +49,21 @@
               </button>
             </div>
           </div>
+
           <div id="rowsContainer"></div>
+
+          <!-- Password Field (Moved to the end) -->
+          <div class="mb-3">
+            <label for="passwordInput" class="form-label">Password</label>
+            <input
+              type="password"
+              id="passwordInput"
+              class="form-control"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+
           <button type="submit" id="sendBtn" class="btn-send">Send</button>
         </form>
       </div>
