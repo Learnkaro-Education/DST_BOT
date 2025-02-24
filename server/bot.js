@@ -12,7 +12,7 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
-const token = process.env.BOT_TOKEN;
+const token = 7040232225:AAFfkh6OCwJIa3HxlSJ_b7bTUbEYotb-6Yg;
 const channelId = process.env.CHANNEL_ID;
 const key = process.env.PASSWORD;
 if (!token || !channelId) {
