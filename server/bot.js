@@ -35,7 +35,8 @@ const upload = multer({ storage });
 const bot = new Bot(token);
 
 // Middleware to parse JSON requests
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN,
@@ -43,42 +44,72 @@ app.use(
   })
 );
 
-// Utility function to upload an image to Cloudinary
+// Keep original size but auto-fix orientation
+const processImage = async (buffer) => {
+  return sharp(buffer).rotate().toBuffer();
+};
+
+// Upload image to Cloudinary
 const uploadToCloudinary = async (buffer) => {
   try {
+    console.log("Processing image...");
+    const processedBuffer = await processImage(buffer);
+
+    console.log("Uploading to Cloudinary...");
     return new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
           folder: "telegram-bot-images",
           allowed_formats: ["jpg", "jpeg", "png"],
+          resource_type: "image",
+          overwrite: true,
+          use_filename: true,
         },
         (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
+          if (error) {
+            console.error("Cloudinary upload failed:", error);
+            reject(error);
+          } else {
+            console.log("Cloudinary upload success:", result.secure_url);
+            resolve(result.secure_url);
+          }
         }
       );
-      Readable.from(buffer).pipe(stream);
+      Readable.from(processedBuffer).pipe(stream);
     });
+
   } catch (error) {
-    console.error("Cloudinary upload failed:", error);
+    console.error("Image processing failed:", error);
     throw new Error("Image upload failed.");
   }
 };
 
 // Sanitize HTML for Telegram messages
 const sanitizeHTMLForTelegram = (html) => {
-  return html.replace(/<p>/g, "").replace(/<\/p>/g, "\n").replace(/<br>/g, "");
+  if (!html) return "";
+
+  return html
+    .replace(/<(\/?)h[1-6]>/g, "") // Remove <h1> to <h6> tags
+    .replace(/<p>/g, "") // Remove <p> tags
+    .replace(/<\/p>/g, "\n") // Replace </p> with newline
+    .replace(/<br\s*\/?>/g, "\n") // Convert <br> tags to newline
+    .replace(/<strong[^>]*>/g, "<b>") // Replace <strong> (removes attributes)
+    .replace(/<\/strong>/g, "</b>") // Ensure correct closing tag
+    .replace(/<em>/g, "<i>") // Convert <em> to <i>
+    .replace(/<\/em>/g, "</i>") // Convert </em> to </i>
+    .replace(/<\/?span.*?>/g, "") // Remove <span> tags
+    .replace(/<\/?div.*?>/g, "") // Remove <div> tags
+    .replace(/<\/?u>/g, "") // Remove <u> tags (not supported)
+    .replace(/\sstyle=["'][^"']*["']/g, ""); // Remove all inline styles
 };
+
+
 
 // Bot /start command
 bot.command("start", async (ctx) => {
   try {
-    const imageUrl =
-      "https://res.cloudinary.com/tusharkalra/image/upload/v1734177107/1080_x_1080_size_Algo_Trading_VIP_Group_iu3lcb.png";
-
-    const imageText =
-      "<b>Advance ALGO Trading start from Monday!👌 \n\n <i>Hurry Up Traders</i></b>";
-
+    const imageUrl = "https://res.cloudinary.com/tusharkalra/image/upload/v1734177107/1080_x_1080_size_Algo_Trading_VIP_Group_iu3lcb.png";
+    const imageText = "<b>Advance ALGO Trading start from Monday!👌 \n\n <i>Hurry Up Traders</i></b>";
     const enrollUrl = "https://dilsetrader.com/g/DqZnCfOZ35?code=ALGO60";
     const knowMore = "https://yt.openinapp.co/qdd7v";
 
@@ -100,14 +131,14 @@ bot.command("start", async (ctx) => {
 app.post("/send-message", upload.single("image"), async (req, res) => {
   try {
     const { caption, buttons, password } = req.body;
-    const sanitizedCaption = caption ? sanitizeHTMLForTelegram(caption) : null;
-    console.log(password);
-    console.log(key);
+    const sanitizedCaption = sanitizeHTMLForTelegram(caption);
+    console.log("Received password:", password);
 
     if (key !== password) {
-      console.log("cannot send message");
-      return res.status(403).json({ message: "unauthorized User" });
+      console.log("Unauthorized User");
+      return res.status(403).json({ message: "Unauthorized User" });
     }
+
     let parsedButtons = [];
     if (buttons) {
       try {
@@ -126,14 +157,17 @@ app.post("/send-message", upload.single("image"), async (req, res) => {
 
     let imageUrl = null;
     if (req.file) {
-      const uploadResult = await uploadToCloudinary(req.file.buffer);
-      imageUrl = uploadResult.secure_url;
+      console.log("Image received:", {
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+      });
+
+      imageUrl = await uploadToCloudinary(req.file.buffer);
     }
 
     if (!sanitizedCaption && !imageUrl) {
-      return res
-        .status(400)
-        .json({ error: "At least a caption or image is required." });
+      return res.status(400).json({ error: "At least a caption or image is required." });
     }
 
     if (imageUrl && sanitizedCaption) {
@@ -159,6 +193,7 @@ app.post("/send-message", upload.single("image"), async (req, res) => {
     res.status(500).json({ error: "Failed to send message to the channel." });
   }
 });
+
 // Start the bot
 bot
   .start()
