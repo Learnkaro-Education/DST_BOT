@@ -52,7 +52,11 @@
 
           <div id="rowsContainer"></div>
 
-          <!-- Password Field (Moved to the end) -->
+          <div class="mb-3">
+            <label for="scheduleDateTime" class="form-label">Schedule Date & Time</label>
+            <input type="datetime-local" id="scheduleDateTime" class="form-control" />
+          </div>
+
           <div class="mb-3">
             <label for="passwordInput" class="form-label">Password</label>
             <input
@@ -64,7 +68,10 @@
             />
           </div>
 
-          <button type="submit" id="sendBtn" class="btn-send">Send</button>
+          <div style="display: flex; gap: 10px;">
+            <button type="submit" id="sendBtn" class="btn btn-primary">Send</button>
+            <button type="submit" id="scheduleBtn" class="btn btn-warning">Schedule</button>
+          </div>
         </form>
       </div>
     </div>
