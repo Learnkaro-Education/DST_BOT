@@ -6,6 +6,8 @@ const multer = require("multer");
 const { v2: cloudinary } = require("cloudinary");
 const { Readable } = require("stream");
 const cors = require("cors");
+const fs = require("fs");
+const path = require("path");
 
 dotenv.config();
 
@@ -14,6 +16,7 @@ const port = process.env.PORT || 3000;
 const token = process.env.BOT_TOKEN;
 const channelId = process.env.CHANNEL_ID;
 const key = process.env.PASSWORD;
+
 if (!token || !channelId) {
   console.error("BOT_TOKEN and CHANNEL_ID are required in the .env file.");
   process.exit(1);
@@ -33,7 +36,23 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
 
-const scheduledMessages = [];
+const scheduledPath = path.join(__dirname, "scheduled.json");
+
+const loadScheduledMessages = () => {
+  if (!fs.existsSync(scheduledPath)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(scheduledPath));
+  } catch (e) {
+    console.error("Failed to load scheduled messages:", e);
+    return [];
+  }
+};
+
+const saveScheduledMessages = (messages) => {
+  fs.writeFileSync(scheduledPath, JSON.stringify(messages, null, 2));
+};
+
+let scheduledMessages = loadScheduledMessages();
 
 const processImage = async (buffer) => sharp(buffer).rotate().toBuffer();
 
@@ -90,14 +109,16 @@ const sendTelegramMessage = async (chatId, caption, imageUrl, inlineKeyboard) =>
 
 setInterval(async () => {
   const now = new Date();
-  
+
   for (let i = scheduledMessages.length - 1; i >= 0; i--) {
     const msg = scheduledMessages[i];
-    if (msg.sendAt <= now) {
+    if (new Date(msg.sendAt) <= now) {
       try {
         console.log("Sending scheduled message:", msg);
-        await sendTelegramMessage(channelId, msg.caption, msg.imageUrl, msg.inlineKeyboard);
+        const keyboard = InlineKeyboard.from(msg.inlineKeyboard || []);
+        await sendTelegramMessage(channelId, msg.caption, msg.imageUrl, keyboard);
         scheduledMessages.splice(i, 1);
+        saveScheduledMessages(scheduledMessages);
       } catch (err) {
         console.error("Scheduled send failed:", err);
       }
@@ -109,8 +130,6 @@ app.post("/send-message", upload.single("image"), async (req, res) => {
   try {
     const { caption, buttons, password, scheduleTime } = req.body;
     const sanitizedCaption = sanitizeHTMLForTelegram(caption);
-
-    console.log("/send-message hit. scheduleTime:", scheduleTime);
 
     if (key !== password) return res.status(403).json({ message: "Unauthorized User" });
 
@@ -135,13 +154,15 @@ app.post("/send-message", upload.single("image"), async (req, res) => {
 
     if (scheduleTime) {
       const sendAt = new Date(scheduleTime);
-      console.log("Scheduling message for", sendAt.toISOString());
-      scheduledMessages.push({
+      const scheduled = {
+        id: Date.now(),
         caption: sanitizedCaption,
         imageUrl,
-        inlineKeyboard,
-        sendAt,
-      });
+        inlineKeyboard: inlineKeyboard.inline_keyboard,
+        sendAt: sendAt.toISOString(),
+      };
+      scheduledMessages.push(scheduled);
+      saveScheduledMessages(scheduledMessages);
       return res.status(200).json({ message: "Message scheduled successfully!" });
     }
 
@@ -153,8 +174,23 @@ app.post("/send-message", upload.single("image"), async (req, res) => {
   }
 });
 
-app.get("/", (req, res) => {
-  res.send("✅ Telegram Bot Server is running.");
+app.get("/scheduled-messages", (req, res) => {
+  const filtered = scheduledMessages.map(({ id, caption, sendAt }) => ({
+    id,
+    caption,
+    sendAt,
+  }));
+  res.json(filtered);
+});
+
+app.delete("/scheduled-messages/:id", (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const index = scheduledMessages.findIndex((msg) => msg.id === id);
+  if (index === -1) return res.status(404).json({ message: "Message not found" });
+
+  scheduledMessages.splice(index, 1);
+  saveScheduledMessages(scheduledMessages);
+  res.status(200).json({ message: "Message deleted" });
 });
 
 bot.start().then(() => console.log("Bot started successfully."));
