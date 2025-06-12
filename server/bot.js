@@ -153,5 +153,9 @@ app.post("/send-message", upload.single("image"), async (req, res) => {
   }
 });
 
+app.get("/", (req, res) => {
+  res.send("✅ Telegram Bot Server is running.");
+});
+
 bot.start().then(() => console.log("Bot started successfully."));
 app.listen(port, () => console.log(`Server running on port ${port}`));
