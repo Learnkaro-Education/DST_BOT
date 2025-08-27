@@ -11,17 +11,33 @@ const path = require("path");
 
 dotenv.config();
 
+// Map channel names to environment values
+const channelMap = {
+  main: process.env.CHANNEL_ID,
+  PERMIUM_DIL_SE_TRADER: process.env.PERMIUM_DIL_SE_TRADER_SEBI_REGISTRATION,
+  MCX_COMM_TRADING: process.env.MCX_COMM_TRADING,
+  STOCK_OPTION_VIP: process.env.STOCK_OPTION_VIP_SEBI_REGISTRATION,
+  ALGO_TRADING_VIP_PLAN: process.env.ALGO_TRADING_VIP_PLAN,
+  VIP_OPTIONS_SELLING: process.env.VIP_OPTIONS_SELLING,
+  BTST_VIP_PERMIUM_PLAN: process.env.BTST_VIP_PERMIUM_PLAN,
+  GOKUL_CHHABRA_SEBI_REGISTRATION: process.env.GOKUL_CHHABRA_SEBI_REGISTRATION,
+  INTRADAY_TRADING_PERMIUM_GROUP: process.env.INTRADAY_TRADING_PERMIUM_GROUP,
+  ALGO_VIP_GROUP: process.env.ALGO_VIP_GROUP,
+  EQUITY_STOCK_INTRADAY_SWING: process.env.EQUITY_STOCK_INTRADAY_SWING,
+  DIL_SE_TRADER_CRYPTO: process.env.DIL_SE_TRADER_CRYPTO,
+};
+
 const app = express();
 const port = process.env.PORT || 3000;
 const token = process.env.BOT_TOKEN;
-const channelId = process.env.CHANNEL_ID;
 const key = process.env.PASSWORD;
 
-if (!token || !channelId) {
-  console.error("BOT_TOKEN and CHANNEL_ID are required in the .env file.");
+if (!token || !channelMap.main) {
+  console.error("BOT_TOKEN and CHANNEL_ID_MAIN are required in the .env file.");
   process.exit(1);
 }
 
+// Cloudinary config
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -36,6 +52,7 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
 
+// Scheduled messages load/save
 const scheduledPath = path.join(__dirname, "scheduled.json");
 
 const loadScheduledMessages = () => {
@@ -54,6 +71,7 @@ const saveScheduledMessages = (messages) => {
 
 let scheduledMessages = loadScheduledMessages();
 
+// Image upload to Cloudinary
 const processImage = async (buffer) => sharp(buffer).rotate().toBuffer();
 
 const uploadToCloudinary = async (buffer) => {
@@ -73,13 +91,14 @@ const uploadToCloudinary = async (buffer) => {
   });
 };
 
+// Telegram-safe HTML
 const sanitizeHTMLForTelegram = (html) => {
   if (!html) return "";
   return html
     .replace(/<(\/?)h[1-6]>/g, "")
     .replace(/<p>/g, "")
     .replace(/<\/p>/g, "\n")
-    .replace(/<br\s*\/?>(?!<)/g, "\n")
+    .replace(/<br\s*\/?>/g, "\n")
     .replace(/<strong[^>]*>/g, "<b>")
     .replace(/<\/strong>/g, "</b>")
     .replace(/<em>/g, "<i>")
@@ -90,6 +109,7 @@ const sanitizeHTMLForTelegram = (html) => {
     .replace(/\sstyle=["'][^"']*["']/g, "");
 };
 
+// Send to Telegram
 const sendTelegramMessage = async (chatId, caption, imageUrl, inlineKeyboard) => {
   if (imageUrl && caption) {
     await bot.api.sendPhoto(chatId, imageUrl, {
@@ -107,6 +127,7 @@ const sendTelegramMessage = async (chatId, caption, imageUrl, inlineKeyboard) =>
   }
 };
 
+// Scheduled job every 10 seconds
 setInterval(async () => {
   const now = new Date();
 
@@ -114,24 +135,28 @@ setInterval(async () => {
     const msg = scheduledMessages[i];
     if (new Date(msg.sendAt) <= now) {
       try {
-        console.log("Sending scheduled message:", msg);
+        console.log("⏰ Sending scheduled message to:", msg.channelId);
         const keyboard = InlineKeyboard.from(msg.inlineKeyboard || []);
-        await sendTelegramMessage(channelId, msg.caption, msg.imageUrl, keyboard);
+        await sendTelegramMessage(msg.channelId || channelMap["main"], msg.caption, msg.imageUrl, keyboard);
         scheduledMessages.splice(i, 1);
         saveScheduledMessages(scheduledMessages);
       } catch (err) {
-        console.error("Scheduled send failed:", err);
+        console.error("❌ Scheduled send failed:", err);
       }
     }
   }
 }, 10000);
 
+// Main send endpoint
 app.post("/send-message", upload.single("image"), async (req, res) => {
   try {
-    const { caption, buttons, password, scheduleTime } = req.body;
+    const { caption, buttons, password, scheduleTime, channel } = req.body;
     const sanitizedCaption = sanitizeHTMLForTelegram(caption);
 
     if (key !== password) return res.status(403).json({ message: "Unauthorized User" });
+
+    const isAllChannels = channel === "ALL";
+    const targetChannelIds = isAllChannels ? Object.values(channelMap) : [channelMap[channel]];
 
     let parsedButtons = [];
     try {
@@ -152,28 +177,44 @@ app.post("/send-message", upload.single("image"), async (req, res) => {
       return res.status(400).json({ error: "At least a caption or image is required." });
     }
 
+    // If scheduling
     if (scheduleTime) {
       const sendAt = new Date(scheduleTime);
-      const scheduled = {
-        id: Date.now(),
+      const scheduledArray = targetChannelIds.map((chatId) => ({
+        id: Date.now() + Math.floor(Math.random() * 1000000),
         caption: sanitizedCaption,
         imageUrl,
         inlineKeyboard: inlineKeyboard.inline_keyboard,
         sendAt: sendAt.toISOString(),
-      };
-      scheduledMessages.push(scheduled);
+        channelId: chatId,
+      }));
+
+      scheduledMessages.push(...scheduledArray);
       saveScheduledMessages(scheduledMessages);
+
+      console.log("⏰ Scheduled for channels:", scheduledArray.map(s => s.channelId));
       return res.status(200).json({ message: "Message scheduled successfully!" });
     }
 
-    await sendTelegramMessage(channelId, sanitizedCaption, imageUrl, inlineKeyboard);
-    res.status(200).json({ message: "Message sent successfully!" });
+    // Send immediately
+    for (const chatId of targetChannelIds) {
+      try {
+        await sendTelegramMessage(chatId, sanitizedCaption, imageUrl, inlineKeyboard);
+        console.log(`✅ Message sent to [${chatId}]`);
+      } catch (err) {
+        console.error(`❌ Failed to send message to [${chatId}]`, err);
+      }
+    }
+
+    return res.status(200).json({ message: "Message sent successfully!" });
+
   } catch (err) {
     console.error("/send-message error:", err);
-    res.status(500).json({ error: "Failed to send message." });
+    return res.status(500).json({ error: "Failed to send message." });
   }
 });
 
+// View scheduled messages
 app.get("/scheduled-messages", (req, res) => {
   const filtered = scheduledMessages.map(({ id, caption, sendAt }) => ({
     id,
@@ -183,6 +224,7 @@ app.get("/scheduled-messages", (req, res) => {
   res.json(filtered);
 });
 
+// Delete scheduled message
 app.delete("/scheduled-messages/:id", (req, res) => {
   const id = parseInt(req.params.id, 10);
   const index = scheduledMessages.findIndex((msg) => msg.id === id);
@@ -193,5 +235,6 @@ app.delete("/scheduled-messages/:id", (req, res) => {
   res.status(200).json({ message: "Message deleted" });
 });
 
-bot.start().then(() => console.log("Bot started successfully."));
-app.listen(port, () => console.log(`Server running on port ${port}`));
+// Start
+bot.start().then(() => console.log("🤖 Bot started successfully."));
+app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
