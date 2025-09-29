@@ -230,9 +230,17 @@ app.post("/send-message", upload.single("image"), async (req, res) => {
 
     return res.status(200).json({ message: "Message sent successfully!" });
   } catch (err) {
-    console.error("❌ /send-message error:", err);
-    return res.status(500).json({ message: "Failed to send message." });
+  console.error("❌ /send-message error:", err);
+
+  // 🧠 Detect Timeout (Grammy 499)
+  if (err.http_code === 499 || err.name === "TimeoutError" || err.message?.includes("Timeout")) {
+    return res.status(504).json({ message: "Request Timeout. Please try again." });
   }
+
+  // 🧠 Fallback
+  return res.status(500).json({ message: "Something went wrong. Please try again." });
+}
+
 });
 
 //
