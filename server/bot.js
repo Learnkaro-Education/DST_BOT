@@ -43,6 +43,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const bot = new Bot(token);
+
 // ✅ Express Config
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -50,11 +52,9 @@ app.use(cors({ origin: process.env.CORS_ORIGIN || "*", credentials: true }));
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
-const bot = new Bot(token);
 
-// ✅ Scheduled Message Helpers
+// ✅ Scheduled Message Store
 const scheduledPath = path.join(__dirname, "scheduled_messages.json");
-
 const loadScheduledMessages = () => {
   if (!fs.existsSync(scheduledPath)) return [];
   try {
@@ -64,32 +64,54 @@ const loadScheduledMessages = () => {
     return [];
   }
 };
-
 const saveScheduledMessages = (messages) => {
   fs.writeFileSync(scheduledPath, JSON.stringify(messages, null, 2));
 };
-
 let scheduledMessages = loadScheduledMessages();
 
 // ✅ Image Upload
 const processImage = async (buffer) => sharp(buffer).rotate().toBuffer();
-
 const uploadToCloudinary = async (buffer) => {
-  const processedBuffer = await processImage(buffer);
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder: "telegram-bot-images",
-        allowed_formats: ["jpg", "jpeg", "png"],
-        resource_type: "image",
-        overwrite: true,
-        use_filename: true,
-      },
-      (error, result) => (error ? reject(error) : resolve(result.secure_url))
-    );
-    Readable.from(processedBuffer).pipe(stream);
-  });
+  try {
+    const processedBuffer = await processImage(buffer);
+
+    return await Promise.race([
+      new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: "telegram-bot-images",
+            allowed_formats: ["jpg", "jpeg", "png"],
+            resource_type: "image",
+            overwrite: true,
+            use_filename: true,
+          },
+          (error, result) => {
+            if (error) {
+              console.error("❌ Cloudinary upload error:", error);
+              return reject(error);
+            }
+            console.log("✅ Cloudinary upload success:", result.secure_url);
+            resolve(result.secure_url);
+          }
+        );
+
+        // ✅ Pipe + end
+        const readStream = Readable.from(processedBuffer);
+        readStream.pipe(uploadStream);
+        readStream.on("error", reject);
+      }),
+
+      // ⏰ Timeout guard (10 seconds)
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Cloudinary upload timeout")), 10000)
+      ),
+    ]);
+  } catch (err) {
+    console.error("🚨 uploadToCloudinary failed:", err);
+    throw err;
+  }
 };
+
 
 // ✅ Clean HTML for Telegram
 const sanitizeHTMLForTelegram = (html) => {
@@ -108,27 +130,27 @@ const sanitizeHTMLForTelegram = (html) => {
     .replace(/\sstyle=["'][^"']*["']/g, "");
 };
 
-// ✅ Send Telegram Message
+// ✅ Smart Send Message
 const sendTelegramMessage = async (chatId, caption, imageUrl, inlineKeyboard) => {
-  if (!chatId) throw new Error("chat_id is empty or invalid");
+  if (!chatId) throw new Error("Invalid chatId");
 
-  if (imageUrl && caption) {
+  const hasImage = imageUrl && /\.(jpg|jpeg|png)$/i.test(imageUrl);
+
+  if (hasImage) {
     await bot.api.sendPhoto(chatId, imageUrl, {
-      caption,
+      caption: caption || "",
       parse_mode: "HTML",
       reply_markup: inlineKeyboard,
     });
-  } else if (imageUrl) {
-    await bot.api.sendPhoto(chatId, imageUrl, { reply_markup: inlineKeyboard });
   } else {
-    await bot.api.sendMessage(chatId, caption, {
+    await bot.api.sendMessage(chatId, caption || " ", {
       parse_mode: "HTML",
       reply_markup: inlineKeyboard,
     });
   }
 };
 
-// ✅ Cron Job: send scheduled messages every 10s
+// ✅ CRON Job: Send Scheduled Messages
 setInterval(async () => {
   const now = new Date();
   for (let i = scheduledMessages.length - 1; i >= 0; i--) {
@@ -148,17 +170,21 @@ setInterval(async () => {
 }, 10000);
 
 //
-// ✅ MAIN ROUTE: /send-message
+// ✅ MAIN ROUTE: /send-message (Cloudinary)
+//
+//
+// ✅ MAIN ROUTE: /send-message (Cloudinary with Size Check)
 //
 app.post("/send-message", upload.single("image"), async (req, res) => {
   try {
     const { caption, buttons, password, scheduleTime, channel } = req.body;
 
+    // 🔐 Password check
     if (key !== password) {
       return res.status(403).json({ message: "Unauthorized User" });
     }
 
-    // 🧭 Parse channels (frontend sends JSON array)
+    // 🎯 Parse channels
     let selectedChannels = [];
     try {
       selectedChannels = JSON.parse(channel);
@@ -166,19 +192,11 @@ app.post("/send-message", upload.single("image"), async (req, res) => {
       selectedChannels = [channel];
     }
 
-    // ✅ Map channel names to IDs
-    const targetChannelIds = selectedChannels
-      .map((ch) => channelMap[ch])
-      .filter(Boolean);
-
-    console.log("✅ Selected Channels:", selectedChannels);
-    console.log("🎯 Target Channel IDs:", targetChannelIds);
-
-    if (targetChannelIds.length === 0) {
+    const targetChannelIds = selectedChannels.map((ch) => channelMap[ch]).filter(Boolean);
+    if (targetChannelIds.length === 0)
       return res.status(400).json({ message: "No valid channels selected." });
-    }
 
-    // 🧱 Buttons
+    // 🔘 Buttons
     let parsedButtons = [];
     try {
       parsedButtons = JSON.parse(buttons || "[]");
@@ -191,83 +209,198 @@ app.post("/send-message", upload.single("image"), async (req, res) => {
       if (btn.text && btn.url) inlineKeyboard.row({ text: btn.text, url: btn.url });
     });
 
+    // 🧼 Sanitize caption
     const sanitizedCaption = sanitizeHTMLForTelegram(caption);
-    let imageUrl = null;
-    if (req.file) imageUrl = await uploadToCloudinary(req.file.buffer);
 
-    if (!sanitizedCaption && !imageUrl) {
-      return res.status(400).json({ message: "Please provide a caption or image." });
+    // 🖼 Handle image
+    let imageUrl = null;
+    if (req.file) {
+      const sizeMB = req.file.size / (1024 * 1024);
+      console.log(`📏 Uploaded image size: ${sizeMB.toFixed(2)} MB`);
+
+      // 🚫 Reject >30 MB
+      if (sizeMB > 30) {
+        return res
+          .status(400)
+          .json({ message: "Image too large. Maximum allowed size is 30 MB." });
+      }
+
+      // 🔄 Optional compression for >10 MB
+      if (sizeMB > 10) {
+        console.log("🗜 Compressing large image before upload...");
+        req.file.buffer = await sharp(req.file.buffer)
+          .jpeg({ quality: 80 })
+          .resize({ width: 1920, withoutEnlargement: true })
+          .toBuffer();
+      }
+
+      console.log("🖼 Uploading to Cloudinary...");
+      imageUrl = await uploadToCloudinary(req.file.buffer);
+      console.log("✅ Uploaded:", imageUrl);
     }
 
-    // 🕓 Schedule Message
+    // 🧱 Validate content
+    if (!sanitizedCaption && !imageUrl && parsedButtons.length === 0)
+      return res.status(400).json({ message: "Please provide caption, image, or button." });
+
+    // 🕓 Schedule or send now
     if (scheduleTime) {
       const sendAt = new Date(scheduleTime);
-      const scheduledArray = targetChannelIds.map((chatId) => ({
-        id: Date.now() + Math.floor(Math.random() * 1000000),
-        caption: sanitizedCaption,
-        imageUrl,
-        inlineKeyboard: inlineKeyboard.inline_keyboard,
-        sendAt: sendAt.toISOString(),
-        channelId: chatId,
-      }));
-
-      scheduledMessages.push(...scheduledArray);
+      targetChannelIds.forEach((chatId) =>
+        scheduledMessages.push({
+          id: Date.now() + Math.random(),
+          caption: sanitizedCaption,
+          imageUrl,
+          inlineKeyboard: inlineKeyboard.inline_keyboard,
+          sendAt: sendAt.toISOString(),
+          channelId: chatId,
+        })
+      );
       saveScheduledMessages(scheduledMessages);
-
-      console.log("📅 Scheduled for:", scheduledArray.map((s) => s.channelId));
-      return res.status(200).json({ message: "Message scheduled successfully!" });
+      return res.json({ message: "Message scheduled successfully!" });
     }
 
-    // 🚀 Send Immediately
+    // 🚀 Immediate send
+    for (const chatId of targetChannelIds) {
+      await sendTelegramMessage(chatId, sanitizedCaption, imageUrl, inlineKeyboard);
+      console.log(`✅ Message sent to ${chatId}`);
+    }
+
+    res.json({ message: "Message sent successfully!" });
+  } catch (err) {
+    console.error("❌ /send-message error:", err);
+    res.status(500).json({
+      message:
+        err.message || "Something went wrong while sending the message.",
+    });
+  }
+});
+
+
+//
+// 🧩 Template Route (Keep As Is)
+//
+app.post("/send-template", async (req, res) => {
+  try {
+    const { template, channels, password } = req.body;
+    if (key !== password)
+      return res.status(403).json({ message: "Unauthorized User" });
+
+    // 🧭 Parse Channels
+    let selectedChannels = [];
+    try {
+      selectedChannels = Array.isArray(channels)
+        ? channels
+        : JSON.parse(channels);
+    } catch {
+      selectedChannels = [channels];
+    }
+
+    const targetChannelIds = selectedChannels
+      .map((ch) => channelMap[ch])
+      .filter(Boolean);
+
+    if (!targetChannelIds.length)
+      return res
+        .status(400)
+        .json({ message: "No valid channels selected." });
+
+    // ⚙️ Define templates here
+    let caption = "";
+    let imageUrl = "";
+    let inlineKeyboard = new InlineKeyboard();
+
+    // 🧩 Switch by template name
+    switch (template) {
+      case "template1":
+        caption = `<b>Next HERO ZERO Trading Plan is ready!</b>\nI am NOW adding new Traders in AI Scalping BOT! 👇👇`;
+        imageUrl =
+          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/photo_2025-10-01_12-32-34.jpg";
+        inlineKeyboard
+          .row({
+            text: "❤️ Step 1) Join VIP Group",
+            url: "https://www.dilsetrader.in/subscriptions/telegram-bot?code=INTRADAY",
+          })
+          .row({
+            text: "✅ Step 2) Open Dhan A/c",
+            url: "https://invite.dhan.co/?join=GOKULJI",
+          })
+          .row({
+            text: "📌 Step 3) Connect Algo",
+            url: "https://t.me/Auto_Trade_VIP_Bot?start=join",
+          });
+        break;
+      case "template2":
+        caption = `AI Scalper Bot is ACTIVE NOW!! Make Sure you are logged in for Smooth Trading Experience!\nNext TRADING PLAN is ready 🔥 🔥 Be ready for AUTO-Trading!\nJust follow 2 steps! 👇`;
+        imageUrl =
+          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/CONNECT+YOUR+BROKER.png";
+        inlineKeyboard
+          .row({
+            text: "📌 Step 1) Open Dhan A/c",
+            url: "https://invite.dhan.co/?join=GOKULJI",
+          })
+          .row({
+            text: "✅ Step 2) Connect Your Broker",
+            url: "https://t.me/Auto_Trade_VIP_Bot?start=join",
+          })
+        break;
+
+      case "template3":
+        caption = `🚀 <b>Crypto VIP Offer!</b>\nTrade Crypto with Experts ⚡`;
+        imageUrl =
+          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/crypto-offer.png";
+        inlineKeyboard
+          .row({
+            text: "Join Crypto VIP 🔥",
+            url: "https://t.me/dilsecrypto7",
+          })
+          .row({
+            text: "📌 Open DELTA A/c",
+            url: "https://www.delta.exchange/?code=GOKULJI",
+          });
+        break;
+
+      default:
+        return res
+          .status(400)
+          .json({ message: "Invalid template selected." });
+    }
+
+    // 🚀 Send to all selected channels
     for (const chatId of targetChannelIds) {
       try {
-        await sendTelegramMessage(chatId, sanitizedCaption, imageUrl, inlineKeyboard);
-        console.log(`✅ Message sent to [${chatId}]`);
+        await bot.api.sendPhoto(chatId, imageUrl, {
+          caption,
+          parse_mode: "HTML",
+          reply_markup: inlineKeyboard,
+        });
+        console.log(` Sent ${template} to ${chatId}`);
       } catch (err) {
-        console.error(`❌ Failed to send message to [${chatId}]`, err);
+        console.error(
+          `❌ Failed to send ${template} to ${chatId}:`,
+          err.response?.description || err.message
+        );
       }
     }
 
-    return res.status(200).json({ message: "Message sent successfully!" });
+    res.json({ message: `${template} sent successfully!` });
   } catch (err) {
-  console.error("❌ /send-message error:", err);
+    console.error("❌ /send-template error:", err);
 
-  // 🧠 Detect Timeout (Grammy 499)
-  if (err.http_code === 499 || err.name === "TimeoutError" || err.message?.includes("Timeout")) {
-    return res.status(504).json({ message: "Request Timeout. Please try again." });
+    if (err?.message?.includes("File size too large")) {
+      return res.status(400).json({
+        message: "🖼️ Image too large! Please upload an image under 10 MB.",
+      });
+    }
+
+    return res.status(500).json({
+      message: err.message || "Something went wrong while sending template.",
+    });
   }
-
-  // 🧠 Fallback
-  return res.status(500).json({ message: "Something went wrong. Please try again." });
-}
-
 });
 
 //
-// 🗓 View Scheduled Messages
+// 🚀 Start Bot + Server
 //
-app.get("/scheduled-messages", (req, res) => {
-  const filtered = scheduledMessages.map(({ id, caption, sendAt }) => ({
-    id,
-    caption,
-    sendAt,
-  }));
-  res.json(filtered);
-});
-
-//
-// ❌ Delete Scheduled Message
-//
-app.delete("/scheduled-messages/:id", (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  const index = scheduledMessages.findIndex((msg) => msg.id === id);
-  if (index === -1) return res.status(404).json({ message: "Message not found" });
-
-  scheduledMessages.splice(index, 1);
-  saveScheduledMessages(scheduledMessages);
-  res.status(200).json({ message: "Message deleted" });
-});
-
-// ✅ Start Bot + Server
 bot.start().then(() => console.log("🤖 Bot started successfully"));
 app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
