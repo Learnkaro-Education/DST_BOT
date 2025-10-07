@@ -346,17 +346,17 @@ app.post("/send-template", async (req, res) => {
         break;
 
       case "template3":
-        caption = `🚀 <b>Crypto VIP Offer!</b>\nTrade Crypto with Experts ⚡`;
+        caption = `<b>AI SCALPER OFFER ACTIVATED!</b>\n\n 🚀 LIMITED Seats only: https://www.dilsetrader.in/subscriptions/telegram-bot?code=INTRADAY`;
         imageUrl =
-          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/crypto-offer.png";
+          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/photo_2025-10-06_12-43-18.jpg";
         inlineKeyboard
           .row({
-            text: "Join Crypto VIP 🔥",
-            url: "https://t.me/dilsecrypto7",
+            text: "✅ 75% Discount Link ",
+            url: "https://www.dilsetrader.in/subscriptions/telegram-bot?code=INTRADAY",
           })
           .row({
-            text: "📌 Open DELTA A/c",
-            url: "https://www.delta.exchange/?code=GOKULJI",
+            text: "📌 Complete VIP Package",
+            url: "https://www.dilsetrader.in/subscriptions/vip?code=VIP90",
           });
         break;
 
