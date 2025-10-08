@@ -360,6 +360,21 @@ app.post("/send-template", async (req, res) => {
           });
         break;
 
+        case "template4":
+        caption = `<b>CRYPTO LIVE Trade is ACTIVATED!</b>📌 \n\n Follow these 2 Steps! 👇`;
+        imageUrl =
+          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/(1920+x+1080)+CRYPTO+VIP+Start+Today+Girl.png";
+        inlineKeyboard
+          .row({
+            text: "📌Step 1) Open DELTA A/c ",
+            url: "https://www.delta.exchange/?code=GOKULJI",
+          })
+          .row({
+            text: "✅ Step 2) Join CRYPTO VIP",
+            url: "https://t.me/dilsecrypto7",
+          });
+        break;
+
       default:
         return res
           .status(400)
