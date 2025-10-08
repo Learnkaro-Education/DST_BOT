@@ -333,7 +333,7 @@ app.post("/send-template", async (req, res) => {
       case "template2":
         caption = `<b>AI Scalper Bot is ACTIVE NOW!! Make Sure you are logged in for Smooth Trading Experience!</b>\n\nNext TRADING PLAN is ready 🔥 🔥 Be ready for AUTO-Trading!\nJust follow 2 steps! 👇`;
         imageUrl =
-          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/CONNECT+YOUR+BROKER.png";
+          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/CONNECT+YOUR+BROKER-+premium.png";
         inlineKeyboard
           .row({
             text: "📌 Step 1) Open Dhan A/c",
