@@ -464,13 +464,13 @@ async function sendTemplateDirect(templateName, channelKeys) {
 }
 
 cron.schedule(
-  "0 18 * * 0-4", // every day at 10:25 AM
+  "0 18 * * 0-4", 
   async () => {
-    console.log("⏰ [Scheduler Triggered] Sending Template 2 (10:25 AM IST)");
+    console.log("⏰ [Scheduler Triggered] Sending Template 2 (18:00 IST)");
     console.log(cron.schedule)
     try {
-      // await sendTemplateDirect("template2", ["STOCK_OPTION_VIP", "PERMIUM_DIL_SE_TRADER","MCX_COMM_TRADING","ALGO_TRADING_VIP_PLAN","BTST_VIP_PERMIUM_PLAN","INTRADAY_TRADING_PERMIUM_GROUP","ALGO_VIP_GROUP","EQUITY_STOCK_INTRADAY_SWING","PROD_MCX"]);
-      await sendTemplateDirect("template2", ["PROD_MCX"]);
+      await sendTemplateDirect("template2", ["STOCK_OPTION_VIP", "PERMIUM_DIL_SE_TRADER","MCX_COMM_TRADING","ALGO_TRADING_VIP_PLAN","BTST_VIP_PERMIUM_PLAN","INTRADAY_TRADING_PERMIUM_GROUP","ALGO_VIP_GROUP","EQUITY_STOCK_INTRADAY_SWING","PROD_MCX"]);
+      // await sendTemplateDirect("template2", ["PROD_MCX"]);
       console.log("✅ [Scheduler] Template 2 sent successfully!");
     } catch (err) {
       console.error(
