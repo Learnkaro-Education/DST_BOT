@@ -464,7 +464,7 @@ async function sendTemplateDirect(templateName, channelKeys) {
 }
 
 cron.schedule(
-  "15 12 * * *", // every day at 10:25 AM
+  "0 18 * * 0-4", // every day at 10:25 AM
   async () => {
     console.log("⏰ [Scheduler Triggered] Sending Template 2 (10:25 AM IST)");
     console.log(cron.schedule)
