@@ -9,7 +9,7 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const cron = require("node-cron");
-
+ 
 dotenv.config();
 
 // ✅ Map channel keys to .env IDs
@@ -437,6 +437,39 @@ async function sendTemplateDirect(templateName, channelKeys) {
           url: "https://t.me/Auto_Trade_VIP_Bot?start=join",
         });
       break;
+      case "template1":
+        caption = `<b>Get Ready Traders! Next HERO ZERO Trading Plan is ready!</b>\nI am NOW adding new Traders in AI Scalping BOT! 👇👇`;
+        imageUrl =
+          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/photo_2025-10-01_12-32-34.jpg";
+        inlineKeyboard
+          .row({
+            text: "❤️ Step 1) Join VIP Group",
+            url: "https://www.dilsetrader.in/subscriptions/telegram-bot?code=INTRADAY",
+          })
+          .row({
+            text: "✅ Step 2) Open Dhan A/c",
+            url: "https://invite.dhan.co/?join=GOKULJI",
+          })
+          .row({
+            text: "📌 Step 3) Connect Algo",
+            url: "https://t.me/Auto_Trade_VIP_Bot?start=join",
+          });
+        break;
+
+        case "template4":
+        caption = `<b>CRYPTO LIVE Trade is ACTIVATED!</b>📌 \n\n Follow these 2 Steps! 👇`;
+        imageUrl =
+          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/(1920+x+1080)+CRYPTO+VIP+Start+Today+Girl.png";
+        inlineKeyboard
+          .row({
+            text: "📌Step 1) Open DELTA A/c ",
+            url: "https://www.delta.exchange/?code=GOKULJI",
+          })
+          .row({
+            text: "✅ Step 2) Join CRYPTO VIP",
+            url: "https://t.me/dilsecrypto7",
+          });
+        break;
 
     default:
       console.log(`⚠️ Template "${templateName}" not supported for auto scheduler`);
@@ -482,6 +515,46 @@ cron.schedule(
   { timezone: "Asia/Kolkata" }
 );
 
+cron.schedule(
+  "0 18 * * *", // → 10:30 AM daily
+  async () => {
+    console.log("⏰ [Scheduler Triggered] Sending Template 1 (10:30 AM IST)");
+    try {
+      await sendTemplateDirect("template1", [
+        "main",
+        "PROD_MCX",
+      ]);
+      console.log("✅ [Scheduler] Template 1 sent successfully!");
+    } catch (err) {
+      console.error(
+        "❌ [Scheduler] Failed to send Template 1:",
+        err.response?.description || err.message
+      );
+    }
+  },
+  { timezone: "Asia/Kolkata" }
+);
+
+cron.schedule(
+  "0 20 * * 0-5", // → 10:30 AM daily
+  async () => {
+    console.log("⏰ [Scheduler Triggered] Sending Template 4 (10:30 AM IST)");
+    try {
+      await sendTemplateDirect("template4", [
+        "main",
+        "DIL_SE_TRADER_CRYPTO",
+        "PROD_MCX",
+      ]);
+      console.log("✅ [Scheduler] Template 4 sent successfully!");
+    } catch (err) {
+      console.error(
+        "❌ [Scheduler] Failed to send Template 4:",
+        err.response?.description || err.message
+      );
+    }
+  },
+  { timezone: "Asia/Kolkata" }
+);
 //
 // 🚀 Start Bot + Server
 //
