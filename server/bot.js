@@ -8,6 +8,7 @@ const { Readable } = require("stream");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
+const cron = require("node-cron");
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ const channelMap = {
   ALGO_VIP_GROUP: process.env.ALGO_VIP_GROUP,
   EQUITY_STOCK_INTRADAY_SWING: process.env.EQUITY_STOCK_INTRADAY_SWING,
   DIL_SE_TRADER_CRYPTO: process.env.DIL_SE_TRADER_CRYPTO,
+  PROD_MCX:process.env.PROD_MCX,
 };
 
 const app = express();
@@ -413,6 +415,72 @@ app.post("/send-template", async (req, res) => {
     });
   }
 });
+
+// Add cron job for template 
+async function sendTemplateDirect(templateName, channelKeys) {
+  let caption = "";
+  let imageUrl = "";
+  let inlineKeyboard = new InlineKeyboard();
+
+  switch (templateName) {
+    case "template2":
+      caption = `<b>AI Scalper Bot is ACTIVE NOW!! Make Sure you are logged in for Smooth Trading Experience!</b>\n\nNext TRADING PLAN is ready 🔥 🔥 Be ready for AUTO-Trading!\nJust follow 2 steps! 👇`;
+      imageUrl =
+        "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/CONNECT+YOUR+BROKER-+premium.png";
+      inlineKeyboard
+        .row({
+          text: "📌 Step 1) Open Dhan A/c",
+          url: "https://invite.dhan.co/?join=GOKULJI",
+        })
+        .row({
+          text: "✅ Step 2) Connect Your Broker",
+          url: "https://t.me/Auto_Trade_VIP_Bot?start=join",
+        });
+      break;
+
+    default:
+      console.log(`⚠️ Template "${templateName}" not supported for auto scheduler`);
+      return;
+  }
+
+  const targetChannelIds = channelKeys.map((ch) => channelMap[ch]).filter(Boolean);
+  if (!targetChannelIds.length) {
+    console.log(`⚠️ No valid channel IDs found for ${templateName}`);
+    return;
+  }
+
+  for (const chatId of targetChannelIds) {
+    try {
+      await bot.api.sendPhoto(chatId, imageUrl, {
+        caption,
+        parse_mode: "HTML",
+        reply_markup: inlineKeyboard,
+      });
+      console.log(`✅ Auto-sent ${templateName} to ${chatId}`);
+    } catch (err) {
+      console.error(`❌ Auto-send failed for ${chatId}:`, err.response?.description || err.message);
+    }
+  }
+}
+
+cron.schedule(
+  "44 11 * * *", // every day at 10:25 AM
+  async () => {
+    console.log("⏰ [Scheduler Triggered] Sending Template 2 (10:25 AM IST)");
+    console.log(cron.schedule)
+    try {
+      // await sendTemplateDirect("template2", ["STOCK_OPTION_VIP", "PERMIUM_DIL_SE_TRADER","MCX_COMM_TRADING","ALGO_TRADING_VIP_PLAN","BTST_VIP_PERMIUM_PLAN","INTRADAY_TRADING_PERMIUM_GROUP","ALGO_VIP_GROUP","EQUITY_STOCK_INTRADAY_SWING","PROD_MCX"]);
+      await sendTemplateDirect("template2", ["PROD_MCX"]);
+      console.log("✅ [Scheduler] Template 2 sent successfully!");
+    } catch (err) {
+      console.error(
+        "❌ [Scheduler] Failed to send Template 2:",
+        err.response?.description || err.message
+      );
+    }
+  },
+  { timezone: "Asia/Kolkata" }
+);
 
 //
 // 🚀 Start Bot + Server
