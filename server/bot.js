@@ -26,6 +26,7 @@ const channelMap = {
   EQUITY_STOCK_INTRADAY_SWING: process.env.EQUITY_STOCK_INTRADAY_SWING,
   DIL_SE_TRADER_CRYPTO: process.env.DIL_SE_TRADER_CRYPTO,
   PROD_MCX:process.env.PROD_MCX,
+  CRYPTO_VIP:process.env.CRYPTO_VIP
 };
 
 const app = express();
