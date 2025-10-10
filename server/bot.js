@@ -315,7 +315,7 @@ app.post("/send-template", async (req, res) => {
     // 🧩 Switch by template name
     switch (template) {
       case "template1":
-        caption = `<b>Next HERO ZERO Trading Plan is ready!</b>\nI am NOW adding new Traders in AI Scalping BOT! 👇👇`;
+        caption = `<b>Get Ready Traders! Next HERO ZERO Trading Plan is ready!</b>\nI am NOW adding new Traders in AI Scalping BOT! 👇👇`;
         imageUrl =
           "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/photo_2025-10-01_12-32-34.jpg";
         inlineKeyboard
