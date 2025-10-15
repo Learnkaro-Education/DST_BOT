@@ -378,6 +378,33 @@ app.post("/send-template", async (req, res) => {
           });
         break;
 
+        case "template5":
+        caption = `<b>WE ARE NOW ADDING NEW MEMBERS!</b>\n\n ALL VIP CHANNEL LINKS 👇👇👇`;
+        imageUrl =
+          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/vip+groups.png";
+        inlineKeyboard
+          .row({
+            text: "NIFTY/SENSEX/BANKNIFTY Group ✅",
+            url: "https://www.dilsetrader.in/subscriptions/premium-dilsetrader?code=VIP50",
+          })
+          .row({
+            text: "Join BTST Group 🔥",
+            url: "https://www.dilsetrader.in/subscriptions/btst-vip?code=BTST",
+          })
+          .row({
+            text: "Join MCX VIP ✅",
+            url: "https://www.dilsetrader.in/subscriptions/mcx-commodity-trading?code=VIP50",
+          })
+          .row({
+            text: "Stock Options Group 🔥",
+            url: "https://www.dilsetrader.in/subscriptions/stock-options-vip?code=VIP50",
+          })
+          .row({
+            text: "DIWALI OFFER ALL VIPs ✨",
+            url: "https://www.dilsetrader.in/subscriptions/all-vip?code=DIWALI",
+          });
+        break;
+
       default:
         return res
           .status(400)
