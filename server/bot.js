@@ -1,590 +1,563 @@
-const { Bot, InlineKeyboard } = require("grammy");
-const sharp = require("sharp");
-const express = require("express");
-const dotenv = require("dotenv");
-const multer = require("multer");
-const { v2: cloudinary } = require("cloudinary");
-const { Readable } = require("stream");
-const cors = require("cors");
-const fs = require("fs");
-const path = require("path");
-const cron = require("node-cron");
+// const { Bot, InlineKeyboard } = require("grammy");
+// const sharp = require("sharp");
+// const express = require("express");
+// const dotenv = require("dotenv"); //this is not included in new file
+// const multer = require("multer");
+// const { v2: cloudinary } = require("cloudinary");
+// const { Readable } = require("stream");
+// const cors = require("cors");
+// const fs = require("fs");
+// const path = require("path");
+// const cron = require("node-cron");
  
-dotenv.config();
+// dotenv.config();
 
-// ✅ Map channel keys to .env IDs
-const channelMap = {
-  main: process.env.CHANNEL_ID,
-  PERMIUM_DIL_SE_TRADER: process.env.PERMIUM_DIL_SE_TRADER_SEBI_REGISTRATION,
-  MCX_COMM_TRADING: process.env.MCX_COMM_TRADING,
-  STOCK_OPTION_VIP: process.env.STOCK_OPTION_VIP_SEBI_REGISTRATION,
-  ALGO_TRADING_VIP_PLAN: process.env.ALGO_TRADING_VIP_PLAN,
-  VIP_OPTIONS_SELLING: process.env.VIP_OPTIONS_SELLING,
-  BTST_VIP_PERMIUM_PLAN: process.env.BTST_VIP_PERMIUM_PLAN,
-  INTRADAY_TRADING_PERMIUM_GROUP: process.env.INTRADAY_TRADING_PERMIUM_GROUP,
-  ALGO_VIP_GROUP: process.env.ALGO_VIP_GROUP,
-  EQUITY_STOCK_INTRADAY_SWING: process.env.EQUITY_STOCK_INTRADAY_SWING,
-  DIL_SE_TRADER_CRYPTO: process.env.DIL_SE_TRADER_CRYPTO,
-  PROD_MCX:process.env.PROD_MCX,
-  CRYPTO_VIP:process.env.CRYPTO_VIP
-};
+// // ✅ Map channel keys to .env IDs
+// const channelMap = {
+//   main: process.env.CHANNEL_ID,
+//   PERMIUM_DIL_SE_TRADER: process.env.PERMIUM_DIL_SE_TRADER_SEBI_REGISTRATION,
+//   MCX_COMM_TRADING: process.env.MCX_COMM_TRADING,
+//   STOCK_OPTION_VIP: process.env.STOCK_OPTION_VIP_SEBI_REGISTRATION,
+//   ALGO_TRADING_VIP_PLAN: process.env.ALGO_TRADING_VIP_PLAN,
+//   VIP_OPTIONS_SELLING: process.env.VIP_OPTIONS_SELLING,
+//   BTST_VIP_PERMIUM_PLAN: process.env.BTST_VIP_PERMIUM_PLAN,
+//   INTRADAY_TRADING_PERMIUM_GROUP: process.env.INTRADAY_TRADING_PERMIUM_GROUP,
+//   ALGO_VIP_GROUP: process.env.ALGO_VIP_GROUP,
+//   EQUITY_STOCK_INTRADAY_SWING: process.env.EQUITY_STOCK_INTRADAY_SWING,
+//   DIL_SE_TRADER_CRYPTO: process.env.DIL_SE_TRADER_CRYPTO,
+//   PROD_MCX:process.env.PROD_MCX,
+//   CRYPTO_VIP:process.env.CRYPTO_VIP
+// };
 
-const app = express();
-const port = process.env.PORT || 3000;
-const token = process.env.BOT_TOKEN;
-const key = process.env.PASSWORD;
+// const app = express();
+// const port = process.env.PORT || 3000;
+// const token = process.env.BOT_TOKEN;
+// const key = process.env.PASSWORD;
 
-if (!token || !channelMap.main) {
-  console.error("❌ BOT_TOKEN and CHANNEL_ID are required in .env");
-  process.exit(1);
-}
+// if (!token || !channelMap.main) {
+//   console.error("❌ BOT_TOKEN and CHANNEL_ID are required in .env");
+//   process.exit(1);
+// }
 
-// ✅ Cloudinary Setup
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// // ✅ Cloudinary Setup
+// cloudinary.config({
+//   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+//   api_key: process.env.CLOUDINARY_API_KEY,
+//   api_secret: process.env.CLOUDINARY_API_SECRET,
+// });
 
-const bot = new Bot(token);
+// const bot = new Bot(token);
 
-// ✅ Express Config
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
-app.use(cors({ origin: process.env.CORS_ORIGIN || "*", credentials: true }));
+// // ✅ Express Config
+// // app.use(express.json({ limit: "50mb" }));
+// // app.use(express.urlencoded({ limit: "50mb", extended: true }));
+// // app.use(cors({ origin: process.env.CORS_ORIGIN || "*", credentials: true }));
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+// const storage = multer.memoryStorage();
+// const upload = multer({ storage });
 
-// ✅ Scheduled Message Store
-const scheduledPath = path.join(__dirname, "scheduled_messages.json");
-const loadScheduledMessages = () => {
-  if (!fs.existsSync(scheduledPath)) return [];
-  try {
-    return JSON.parse(fs.readFileSync(scheduledPath));
-  } catch (e) {
-    console.error("❌ Failed to load scheduled messages:", e);
-    return [];
-  }
-};
-const saveScheduledMessages = (messages) => {
-  fs.writeFileSync(scheduledPath, JSON.stringify(messages, null, 2));
-};
-let scheduledMessages = loadScheduledMessages();
+// // ✅ Scheduled Message Store
+// const scheduledPath = path.join(__dirname, "scheduled_messages.json");
+// const loadScheduledMessages = () => {
+//   if (!fs.existsSync(scheduledPath)) return [];
+//   try {
+//     return JSON.parse(fs.readFileSync(scheduledPath));
+//   } catch (e) {
+//     console.error("❌ Failed to load scheduled messages:", e);
+//     return [];
+//   }
+// };
+// const saveScheduledMessages = (messages) => {
+//   fs.writeFileSync(scheduledPath, JSON.stringify(messages, null, 2));
+// };
+// let scheduledMessages = loadScheduledMessages();
 
-// ✅ Image Upload
-const processImage = async (buffer) => sharp(buffer).rotate().toBuffer();
-const uploadToCloudinary = async (buffer) => {
-  try {
-    const processedBuffer = await processImage(buffer);
+// // ✅ Image Upload
+// const processImage = async (buffer) => sharp(buffer).rotate().toBuffer();
+// const uploadToCloudinary = async (buffer) => {
+//   try {
+//     const processedBuffer = await processImage(buffer);
 
-    return await Promise.race([
-      new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            folder: "telegram-bot-images",
-            allowed_formats: ["jpg", "jpeg", "png"],
-            resource_type: "image",
-            overwrite: true,
-            use_filename: true,
-          },
-          (error, result) => {
-            if (error) {
-              console.error("❌ Cloudinary upload error:", error);
-              return reject(error);
-            }
-            console.log("✅ Cloudinary upload success:", result.secure_url);
-            resolve(result.secure_url);
-          }
-        );
+//     return await Promise.race([
+//       new Promise((resolve, reject) => {
+//         const uploadStream = cloudinary.uploader.upload_stream(
+//           {
+//             folder: "telegram-bot-images",
+//             allowed_formats: ["jpg", "jpeg", "png"],
+//             resource_type: "image",
+//             overwrite: true,
+//             use_filename: true,
+//           },
+//           (error, result) => {
+//             if (error) {
+//               console.error("❌ Cloudinary upload error:", error);
+//               return reject(error);
+//             }
+//             console.log("✅ Cloudinary upload success:", result.secure_url);
+//             resolve(result.secure_url);
+//           }
+//         );
 
-        // ✅ Pipe + end
-        const readStream = Readable.from(processedBuffer);
-        readStream.pipe(uploadStream);
-        readStream.on("error", reject);
-      }),
+//         // ✅ Pipe + end
+//         const readStream = Readable.from(processedBuffer);
+//         readStream.pipe(uploadStream);
+//         readStream.on("error", reject);
+//       }),
 
-      // ⏰ Timeout guard (10 seconds)
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Cloudinary upload timeout")), 10000)
-      ),
-    ]);
-  } catch (err) {
-    console.error("🚨 uploadToCloudinary failed:", err);
-    throw err;
-  }
-};
-
-
-// ✅ Clean HTML for Telegram
-const sanitizeHTMLForTelegram = (html) => {
-  if (!html) return "";
-  return html
-    .replace(/<(\/?)h[1-6]>/g, "")
-    .replace(/<p>/g, "")
-    .replace(/<\/p>/g, "\n")
-    .replace(/<br\s*\/?>/g, "\n")
-    .replace(/<strong[^>]*>/g, "<b>")
-    .replace(/<\/strong>/g, "</b>")
-    .replace(/<em>/g, "<i>")
-    .replace(/<\/em>/g, "</i>")
-    .replace(/<\/?span.*?>/g, "")
-    .replace(/<\/?div.*?>/g, "")
-    .replace(/\sstyle=["'][^"']*["']/g, "");
-};
-
-// ✅ Smart Send Message
-const sendTelegramMessage = async (chatId, caption, imageUrl, inlineKeyboard) => {
-  if (!chatId) throw new Error("Invalid chatId");
-
-  const hasImage = imageUrl && /\.(jpg|jpeg|png)$/i.test(imageUrl);
-
-  if (hasImage) {
-    await bot.api.sendPhoto(chatId, imageUrl, {
-      caption: caption || "",
-      parse_mode: "HTML",
-      reply_markup: inlineKeyboard,
-    });
-  } else {
-    await bot.api.sendMessage(chatId, caption || " ", {
-      parse_mode: "HTML",
-      reply_markup: inlineKeyboard,
-    });
-  }
-};
-
-// ✅ CRON Job: Send Scheduled Messages
-setInterval(async () => {
-  const now = new Date();
-  for (let i = scheduledMessages.length - 1; i >= 0; i--) {
-    const msg = scheduledMessages[i];
-    if (new Date(msg.sendAt) <= now) {
-      try {
-        console.log("⏰ Sending scheduled message to:", msg.channelId);
-        const keyboard = InlineKeyboard.from(msg.inlineKeyboard || []);
-        await sendTelegramMessage(msg.channelId, msg.caption, msg.imageUrl, keyboard);
-        scheduledMessages.splice(i, 1);
-        saveScheduledMessages(scheduledMessages);
-      } catch (err) {
-        console.error("❌ Scheduled send failed:", err);
-      }
-    }
-  }
-}, 10000);
-
-//
-// ✅ MAIN ROUTE: /send-message (Cloudinary)
-//
-//
-// ✅ MAIN ROUTE: /send-message (Cloudinary with Size Check)
-//
-app.post("/send-message", upload.single("image"), async (req, res) => {
-  try {
-    const { caption, buttons, password, scheduleTime, channel } = req.body;
-
-    // 🔐 Password check
-    if (key !== password) {
-      return res.status(403).json({ message: "Unauthorized User" });
-    }
-
-    // 🎯 Parse channels
-    let selectedChannels = [];
-    try {
-      selectedChannels = JSON.parse(channel);
-    } catch {
-      selectedChannels = [channel];
-    }
-
-    const targetChannelIds = selectedChannels.map((ch) => channelMap[ch]).filter(Boolean);
-    if (targetChannelIds.length === 0)
-      return res.status(400).json({ message: "No valid channels selected." });
-
-    // 🔘 Buttons
-    let parsedButtons = [];
-    try {
-      parsedButtons = JSON.parse(buttons || "[]");
-    } catch (err) {
-      console.warn("⚠️ Button parse error:", err);
-    }
-
-    const inlineKeyboard = new InlineKeyboard();
-    parsedButtons.forEach((btn) => {
-      if (btn.text && btn.url) inlineKeyboard.row({ text: btn.text, url: btn.url });
-    });
-
-    // 🧼 Sanitize caption
-    const sanitizedCaption = sanitizeHTMLForTelegram(caption);
-
-    // 🖼 Handle image
-    let imageUrl = null;
-    if (req.file) {
-      const sizeMB = req.file.size / (1024 * 1024);
-      console.log(`📏 Uploaded image size: ${sizeMB.toFixed(2)} MB`);
-
-      // 🚫 Reject >30 MB
-      if (sizeMB > 30) {
-        return res
-          .status(400)
-          .json({ message: "Image too large. Maximum allowed size is 30 MB." });
-      }
-
-      // 🔄 Optional compression for >10 MB
-      if (sizeMB > 10) {
-        console.log("🗜 Compressing large image before upload...");
-        req.file.buffer = await sharp(req.file.buffer)
-          .jpeg({ quality: 80 })
-          .resize({ width: 1920, withoutEnlargement: true })
-          .toBuffer();
-      }
-
-      console.log("🖼 Uploading to Cloudinary...");
-      imageUrl = await uploadToCloudinary(req.file.buffer);
-      console.log("✅ Uploaded:", imageUrl);
-    }
-
-    // 🧱 Validate content
-    if (!sanitizedCaption && !imageUrl && parsedButtons.length === 0)
-      return res.status(400).json({ message: "Please provide caption, image, or button." });
-
-    // 🕓 Schedule or send now
-    if (scheduleTime) {
-      const sendAt = new Date(scheduleTime);
-      targetChannelIds.forEach((chatId) =>
-        scheduledMessages.push({
-          id: Date.now() + Math.random(),
-          caption: sanitizedCaption,
-          imageUrl,
-          inlineKeyboard: inlineKeyboard.inline_keyboard,
-          sendAt: sendAt.toISOString(),
-          channelId: chatId,
-        })
-      );
-      saveScheduledMessages(scheduledMessages);
-      return res.json({ message: "Message scheduled successfully!" });
-    }
-
-    // 🚀 Immediate send
-    for (const chatId of targetChannelIds) {
-      await sendTelegramMessage(chatId, sanitizedCaption, imageUrl, inlineKeyboard);
-      console.log(`✅ Message sent to ${chatId}`);
-    }
-
-    res.json({ message: "Message sent successfully!" });
-  } catch (err) {
-    console.error("❌ /send-message error:", err);
-    res.status(500).json({
-      message:
-        err.message || "Something went wrong while sending the message.",
-    });
-  }
-});
+//       // ⏰ Timeout guard (10 seconds)
+//       new Promise((_, reject) =>
+//         setTimeout(() => reject(new Error("Cloudinary upload timeout")), 10000)
+//       ),
+//     ]);
+//   } catch (err) {
+//     console.error("🚨 uploadToCloudinary failed:", err);
+//     throw err;
+//   }
+// };
 
 
-//
-// 🧩 Template Route (Keep As Is)
-//
-app.post("/send-template", async (req, res) => {
-  try {
-    const { template, channels, password } = req.body;
-    if (key !== password)
-      return res.status(403).json({ message: "Unauthorized User" });
+// // ✅ Clean HTML for Telegram
+// const sanitizeHTMLForTelegram = (html) => {
+//   if (!html) return "";
+//   return html
+//     .replace(/<(\/?)h[1-6]>/g, "")
+//     .replace(/<p>/g, "")
+//     .replace(/<\/p>/g, "\n")
+//     .replace(/<br\s*\/?>/g, "\n")
+//     .replace(/<strong[^>]*>/g, "<b>")
+//     .replace(/<\/strong>/g, "</b>")
+//     .replace(/<em>/g, "<i>")
+//     .replace(/<\/em>/g, "</i>")
+//     .replace(/<\/?span.*?>/g, "")
+//     .replace(/<\/?div.*?>/g, "")
+//     .replace(/\sstyle=["'][^"']*["']/g, "");
+// };
 
-    // 🧭 Parse Channels
-    let selectedChannels = [];
-    try {
-      selectedChannels = Array.isArray(channels)
-        ? channels
-        : JSON.parse(channels);
-    } catch {
-      selectedChannels = [channels];
-    }
+// // ✅ Smart Send Message
+// const sendTelegramMessage = async (chatId, caption, imageUrl, inlineKeyboard) => {
+//   if (!chatId) throw new Error("Invalid chatId");
 
-    const targetChannelIds = selectedChannels
-      .map((ch) => channelMap[ch])
-      .filter(Boolean);
+//   const hasImage = imageUrl && /\.(jpg|jpeg|png)$/i.test(imageUrl);
 
-    if (!targetChannelIds.length)
-      return res
-        .status(400)
-        .json({ message: "No valid channels selected." });
+//   if (hasImage) {
+//     await bot.api.sendPhoto(chatId, imageUrl, {
+//       caption: caption || "",
+//       parse_mode: "HTML",
+//       reply_markup: inlineKeyboard,
+//     });
+//   } else {
+//     await bot.api.sendMessage(chatId, caption || " ", {
+//       parse_mode: "HTML",
+//       reply_markup: inlineKeyboard,
+//     });
+//   }
+// };
 
-    // ⚙️ Define templates here
-    let caption = "";
-    let imageUrl = "";
-    let inlineKeyboard = new InlineKeyboard();
+// // ✅ CRON Job: Send Scheduled Messages
+// setInterval(async () => {
+//   const now = new Date();
+//   for (let i = scheduledMessages.length - 1; i >= 0; i--) {
+//     const msg = scheduledMessages[i];
+//     if (new Date(msg.sendAt) <= now) {
+//       try {
+//         console.log("⏰ Sending scheduled message to:", msg.channelId);
+//         const keyboard = InlineKeyboard.from(msg.inlineKeyboard || []);
+//         await sendTelegramMessage(msg.channelId, msg.caption, msg.imageUrl, keyboard);
+//         scheduledMessages.splice(i, 1);
+//         saveScheduledMessages(scheduledMessages);
+//       } catch (err) {
+//         console.error("❌ Scheduled send failed:", err);
+//       }
+//     }
+//   }
+// }, 10000);
 
-    // 🧩 Switch by template name
-    switch (template) {
-      case "template1":
-        caption = `<b>Get Ready Traders! Next HERO ZERO Trading Plan is ready!</b>\nI am NOW adding new Traders in AI Scalping BOT! 👇👇`;
-        imageUrl =
-          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/photo_2025-10-01_12-32-34.jpg";
-        inlineKeyboard
-          .row({
-            text: "❤️ Step 1) Join VIP Group",
-            url: "https://www.dilsetrader.in/subscriptions/telegram-bot?code=INTRADAY",
-          })
-          .row({
-            text: "✅ Step 2) Open Dhan A/c",
-            url: "https://invite.dhan.co/?join=GOKULJI",
-          })
-          .row({
-            text: "📌 Step 3) Connect Algo",
-            url: "https://t.me/Auto_Trade_VIP_Bot?start=join",
-          });
-        break;
-      case "template2":
-        caption = `<b>AI Scalper Bot is ACTIVE NOW!! Make Sure you are logged in for Smooth Trading Experience!</b>\n\nNext TRADING PLAN is ready 🔥 🔥 Be ready for AUTO-Trading!\nJust follow 2 steps! 👇`;
-        imageUrl =
-          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/CONNECT+YOUR+BROKER-+premium.png";
-        inlineKeyboard
-          .row({
-            text: "📌 Step 1) Open Dhan A/c",
-            url: "https://invite.dhan.co/?join=GOKULJI",
-          })
-          .row({
-            text: "✅ Step 2) Connect Your Broker",
-            url: "https://t.me/Auto_Trade_VIP_Bot?start=join",
-          })
-        break;
+// //
+// // ✅ MAIN ROUTE: /send-message (Cloudinary)
+// //
+// //
+// // ✅ MAIN ROUTE: /send-message (Cloudinary with Size Check)
+// //
+// app.post("/send-message", upload.single("image"), async (req, res) => {
+//   try {
+//     const { caption, buttons, password, scheduleTime, channel } = req.body;
 
-      case "template3":
-        caption = `<b>AI SCALPER OFFER ACTIVATED!</b>\n\n 🚀 LIMITED Seats only: https://www.dilsetrader.in/subscriptions/telegram-bot?code=INTRADAY`;
-        imageUrl =
-          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/photo_2025-10-06_12-43-18.jpg";
-        inlineKeyboard
-          .row({
-            text: "✅ 75% Discount Link ",
-            url: "https://www.dilsetrader.in/subscriptions/telegram-bot?code=INTRADAY",
-          })
-          .row({
-            text: "📌 Complete VIP Package",
-            url: "https://www.dilsetrader.in/subscriptions/vip?code=VIP90",
-          });
-        break;
+//     // 🔐 Password check
+//     if (key !== password) {
+//       return res.status(403).json({ message: "Unauthorized User" });
+//     }
 
-        case "template4":
-        caption = `<b>CRYPTO LIVE Trade is ACTIVATED!</b>📌 \n\n Follow these 2 Steps! 👇`;
-        imageUrl =
-          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/(1920+x+1080)+CRYPTO+VIP+Start+Today+Girl.png";
-        inlineKeyboard
-          .row({
-            text: "📌Step 1) Open DELTA A/c ",
-            url: "https://www.delta.exchange/?code=GOKULJI",
-          })
-          .row({
-            text: "✅ Step 2) Join CRYPTO VIP",
-            url: "https://t.me/dilsecrypto7",
-          });
-        break;
+//     // 🎯 Parse channels
+//     let selectedChannels = [];
+//     try {
+//       selectedChannels = JSON.parse(channel);
+//     } catch {
+//       selectedChannels = [channel];
+//     }
 
-        case "template5":
-        caption = `<b>WE ARE NOW ADDING NEW MEMBERS!</b>\n\n ALL VIP CHANNEL LINKS 👇👇👇`;
-        imageUrl =
-          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/vip+groups.png";
-        inlineKeyboard
-          .row({
-            text: "NIFTY/SENSEX/BANKNIFTY Group ✅",
-            url: "https://www.dilsetrader.in/subscriptions/premium-dilsetrader?code=VIP50",
-          })
-          .row({
-            text: "Join BTST Group 🔥",
-            url: "https://www.dilsetrader.in/subscriptions/btst-vip?code=BTST",
-          })
-          .row({
-            text: "Join MCX VIP ✅",
-            url: "https://www.dilsetrader.in/subscriptions/mcx-commodity-trading?code=VIP50",
-          })
-          .row({
-            text: "Stock Options Group 🔥",
-            url: "https://www.dilsetrader.in/subscriptions/stock-options-vip?code=VIP50",
-          })
-          .row({
-            text: "DIWALI OFFER ALL VIPs ✨",
-            url: "https://www.dilsetrader.in/subscriptions/all-vip?code=DIWALI",
-          });
-        break;
+//     const targetChannelIds = selectedChannels.map((ch) => channelMap[ch]).filter(Boolean);
+//     if (targetChannelIds.length === 0)
+//       return res.status(400).json({ message: "No valid channels selected." });
 
-      default:
-        return res
-          .status(400)
-          .json({ message: "Invalid template selected." });
-    }
+//     // 🔘 Buttons
+//     let parsedButtons = [];
+//     try {
+//       parsedButtons = JSON.parse(buttons || "[]");
+//     } catch (err) {
+//       console.warn("⚠️ Button parse error:", err);
+//     }
 
-    // 🚀 Send to all selected channels
-    for (const chatId of targetChannelIds) {
-      try {
-        await bot.api.sendPhoto(chatId, imageUrl, {
-          caption,
-          parse_mode: "HTML",
-          reply_markup: inlineKeyboard,
-        });
-        console.log(` Sent ${template} to ${chatId}`);
-      } catch (err) {
-        console.error(
-          `❌ Failed to send ${template} to ${chatId}:`,
-          err.response?.description || err.message
-        );
-      }
-    }
+//     const inlineKeyboard = new InlineKeyboard();
+//     parsedButtons.forEach((btn) => {
+//       if (btn.text && btn.url) inlineKeyboard.row({ text: btn.text, url: btn.url });
+//     });
 
-    res.json({ message: `${template} sent successfully!` });
-  } catch (err) {
-    console.error("❌ /send-template error:", err);
+//     // 🧼 Sanitize caption
+//     const sanitizedCaption = sanitizeHTMLForTelegram(caption);
 
-    if (err?.message?.includes("File size too large")) {
-      return res.status(400).json({
-        message: "🖼️ Image too large! Please upload an image under 10 MB.",
-      });
-    }
+//     // 🖼 Handle image
+//     let imageUrl = null;
+//     if (req.file) {
+//       const sizeMB = req.file.size / (1024 * 1024);
+//       console.log(`📏 Uploaded image size: ${sizeMB.toFixed(2)} MB`);
 
-    return res.status(500).json({
-      message: err.message || "Something went wrong while sending template.",
-    });
-  }
-});
+//       // 🚫 Reject >30 MB
+//       if (sizeMB > 30) {
+//         return res
+//           .status(400)
+//           .json({ message: "Image too large. Maximum allowed size is 30 MB." });
+//       }
 
-// Add cron job for template 
-async function sendTemplateDirect(templateName, channelKeys) {
-  let caption = "";
-  let imageUrl = "";
-  let inlineKeyboard = new InlineKeyboard();
+//       // 🔄 Optional compression for > 10 MB
+//       if (sizeMB > 10) {
+//         console.log("🗜 Compressing large image before upload...");
+//         req.file.buffer = await sharp(req.file.buffer)
+//           .jpeg({ quality: 80 })
+//           .resize({ width: 1920, withoutEnlargement: true })
+//           .toBuffer();
+//       }
 
-  switch (templateName) {
-    case "template2":
-      caption = `<b>AI Scalper Bot is ACTIVE NOW!! Make Sure you are logged in for Smooth Trading Experience!</b>\n\nNext TRADING PLAN is ready 🔥 🔥 Be ready for AUTO-Trading!\nJust follow 2 steps! 👇`;
-      imageUrl =
-        "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/CONNECT+YOUR+BROKER-+premium.png";
-      inlineKeyboard
-        .row({
-          text: "📌 Step 1) Open Dhan A/c",
-          url: "https://invite.dhan.co/?join=GOKULJI",
-        })
-        .row({
-          text: "✅ Step 2) Connect Your Broker",
-          url: "https://t.me/Auto_Trade_VIP_Bot?start=join",
-        });
-      break;
-      case "template1":
-        caption = `<b>Get Ready Traders! Next HERO ZERO Trading Plan is ready!</b>\nI am NOW adding new Traders in AI Scalping BOT! 👇👇`;
-        imageUrl =
-          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/photo_2025-10-01_12-32-34.jpg";
-        inlineKeyboard
-          .row({
-            text: "❤️ Step 1) Join VIP Group",
-            url: "https://www.dilsetrader.in/subscriptions/telegram-bot?code=INTRADAY",
-          })
-          .row({
-            text: "✅ Step 2) Open Dhan A/c",
-            url: "https://invite.dhan.co/?join=GOKULJI",
-          })
-          .row({
-            text: "📌 Step 3) Connect Algo",
-            url: "https://t.me/Auto_Trade_VIP_Bot?start=join",
-          });
-        break;
+//       console.log("🖼 Uploading to Cloudinary...");
+//       imageUrl = await uploadToCloudinary(req.file.buffer);
+//       console.log("✅ Uploaded:", imageUrl);
+//     }
 
-        case "template4":
-        caption = `<b>CRYPTO LIVE Trade is ACTIVATED!</b>📌 \n\n Follow these 2 Steps! 👇`;
-        imageUrl =
-          "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/(1920+x+1080)+CRYPTO+VIP+Start+Today+Girl.png";
-        inlineKeyboard
-          .row({
-            text: "📌Step 1) Open DELTA A/c ",
-            url: "https://www.delta.exchange/?code=GOKULJI",
-          })
-          .row({
-            text: "✅ Step 2) Join CRYPTO VIP",
-            url: "https://t.me/dilsecrypto7",
-          });
-        break;
+//     // 🧱 Validate content
+//     if (!sanitizedCaption && !imageUrl && parsedButtons.length === 0)
+//       return res.status(400).json({ message: "Please provide caption, image, or button." });
 
-    default:
-      console.log(`⚠️ Template "${templateName}" not supported for auto scheduler`);
-      return;
-  }
+//     // 🕓 Schedule or send now
+//     if (scheduleTime) {
+//       const sendAt = new Date(scheduleTime);
+//       targetChannelIds.forEach((chatId) =>
+//         scheduledMessages.push({
+//           id: Date.now() + Math.random(),
+//           caption: sanitizedCaption,
+//           imageUrl,
+//           inlineKeyboard: inlineKeyboard.inline_keyboard,
+//           sendAt: sendAt.toISOString(),
+//           channelId: chatId,
+//         })
+//       );
+//       saveScheduledMessages(scheduledMessages);
+//       return res.json({ message: "Message scheduled successfully!" });
+//     }
 
-  const targetChannelIds = channelKeys.map((ch) => channelMap[ch]).filter(Boolean);
-  if (!targetChannelIds.length) {
-    console.log(`⚠️ No valid channel IDs found for ${templateName}`);
-    return;
-  }
+//     // 🚀 Immediate send
+//     for (const chatId of targetChannelIds) {
+//       await sendTelegramMessage(chatId, sanitizedCaption, imageUrl, inlineKeyboard);
+//       console.log(`✅ Message sent to ${chatId}`);
+//     }
 
-  for (const chatId of targetChannelIds) {
-    try {
-      await bot.api.sendPhoto(chatId, imageUrl, {
-        caption,
-        parse_mode: "HTML",
-        reply_markup: inlineKeyboard,
-      });
-      console.log(`✅ Auto-sent ${templateName} to ${chatId}`);
-    } catch (err) {
-      console.error(`❌ Auto-send failed for ${chatId}:`, err.response?.description || err.message);
-    }
-  }
-}
+//     res.json({ message: "Message sent successfully!" });
+//   } catch (err) {
+//     console.error("❌ /send-message error:", err);
+//     res.status(500).json({
+//       message:
+//         err.message || "Something went wrong while sending the message.",
+//     });
+//   }
+// });
 
-cron.schedule(
-  "0 18 * * 0-4", 
-  async () => {
-    console.log("⏰ [Scheduler Triggered] Sending Template 2 (18:00 IST)");
-    console.log(cron.schedule)
-    try {
-      await sendTemplateDirect("template2", ["STOCK_OPTION_VIP", "PERMIUM_DIL_SE_TRADER","MCX_COMM_TRADING","ALGO_TRADING_VIP_PLAN","BTST_VIP_PERMIUM_PLAN","INTRADAY_TRADING_PERMIUM_GROUP","ALGO_VIP_GROUP","EQUITY_STOCK_INTRADAY_SWING","PROD_MCX"]);
-      // await sendTemplateDirect("template2", ["PROD_MCX"]);
-      console.log("✅ [Scheduler] Template 2 sent successfully!");
-    } catch (err) {
-      console.error(
-        "❌ [Scheduler] Failed to send Template 2:",
-        err.response?.description || err.message
-      );
-    }
-  },
-  { timezone: "Asia/Kolkata" }
-);
 
-cron.schedule(
-  "0 18 * * *", // → 10:30 AM daily
-  async () => {
-    console.log("⏰ [Scheduler Triggered] Sending Template 1 (10:30 AM IST)");
-    try {
-      await sendTemplateDirect("template1", [
-        "main",
-        "PROD_MCX",
-      ]);
-      console.log("✅ [Scheduler] Template 1 sent successfully!");
-    } catch (err) {
-      console.error(
-        "❌ [Scheduler] Failed to send Template 1:",
-        err.response?.description || err.message
-      );
-    }
-  },
-  { timezone: "Asia/Kolkata" }
-);
+// //
+// // 🧩 Template Route (Keep As Is)
+// //
+// app.post("/send-template", async (req, res) => {
+//   try {
+//     const { template, channels, password } = req.body;
+//     if (key !== password)
+//       return res.status(403).json({ message: "Unauthorized User" });
 
-cron.schedule(
-  "0 20 * * 0-5", // → 10:30 AM daily
-  async () => {
-    console.log("⏰ [Scheduler Triggered] Sending Template 4 (10:30 AM IST)");
-    try {
-      await sendTemplateDirect("template4", [
-        "main",
-        "DIL_SE_TRADER_CRYPTO",
-        "PROD_MCX",
-      ]);
-      console.log("✅ [Scheduler] Template 4 sent successfully!");
-    } catch (err) {
-      console.error(
-        "❌ [Scheduler] Failed to send Template 4:",
-        err.response?.description || err.message
-      );
-    }
-  },
-  { timezone: "Asia/Kolkata" }
-);
-//
-// 🚀 Start Bot + Server
-//
-bot.start().then(() => console.log("🤖 Bot started successfully"));
-app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
+//     // 🧭 Parse Channels
+//     let selectedChannels = [];
+//     try {
+//       selectedChannels = Array.isArray(channels)
+//         ? channels
+//         : JSON.parse(channels);
+//     } catch {
+//       selectedChannels = [channels];
+//     }
+
+//     const targetChannelIds = selectedChannels
+//       .map((ch) => channelMap[ch])
+//       .filter(Boolean);
+
+//     if (!targetChannelIds.length)
+//       return res
+//         .status(400)
+//         .json({ message: "No valid channels selected." });
+
+//     // ⚙️ Define templates here
+//     let caption = "";
+//     let imageUrl = "";
+//     let inlineKeyboard = new InlineKeyboard();
+
+//     // 🧩 Switch by template name
+//     switch (template) {
+//       case "template1":
+//         caption = `<b>Get Ready Traders! Next HERO ZERO Trading Plan is ready!</b>\nI am NOW adding new Traders in AI Scalping BOT! 👇👇`;
+//         imageUrl =
+//           "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/photo_2025-10-01_12-32-34.jpg";
+//         inlineKeyboard
+//           .row({
+//             text: "❤️ Step 1) Join VIP Group",
+//             url: "https://www.dilsetrader.in/subscriptions/telegram-bot?code=INTRADAY",
+//           })
+//           .row({
+//             text: "✅ Step 2) Open Dhan A/c",
+//             url: "https://invite.dhan.co/?join=GOKULJI",
+//           })
+//           .row({
+//             text: "📌 Step 3) Connect Algo",
+//             url: "https://t.me/Auto_Trade_VIP_Bot?start=join",
+//           });
+//         break;
+//       case "template2":
+//         caption = `<b>AI Scalper Bot is ACTIVE NOW!! Make Sure you are logged in for Smooth Trading Experience!</b>\n\nNext TRADING PLAN is ready 🔥 🔥 Be ready for AUTO-Trading!\nJust follow 2 steps! 👇`;
+//         imageUrl =
+//           "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/CONNECT+YOUR+BROKER-+premium.png";
+//         inlineKeyboard
+//           .row({
+//             text: "📌 Step 1) Open Dhan A/c",
+//             url: "https://invite.dhan.co/?join=GOKULJI",
+//           })
+//           .row({
+//             text: "✅ Step 2) Connect Your Broker",
+//             url: "https://t.me/Auto_Trade_VIP_Bot?start=join",
+//           })
+//         break;
+
+//       case "template3":
+//         caption = `<b>AI SCALPER OFFER ACTIVATED!</b>\n\n 🚀 LIMITED Seats only: https://www.dilsetrader.in/subscriptions/telegram-bot?code=INTRADAY`;
+//         imageUrl =
+//           "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/photo_2025-10-06_12-43-18.jpg";
+//         inlineKeyboard
+//           .row({
+//             text: "✅ 75% Discount Link ",
+//             url: "https://www.dilsetrader.in/subscriptions/telegram-bot?code=INTRADAY",
+//           })
+//           .row({
+//             text: "📌 Complete VIP Package",
+//             url: "https://www.dilsetrader.in/subscriptions/vip?code=VIP90",
+//           });
+//         break;
+
+//         case "template4":
+//         caption = `<b>CRYPTO LIVE Trade is ACTIVATED!</b>📌 \n\n Follow these 2 Steps! 👇`;
+//         imageUrl =
+//           "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/(1920+x+1080)+CRYPTO+VIP+Start+Today+Girl.png";
+//         inlineKeyboard
+//           .row({
+//             text: "📌Step 1) Open DELTA A/c ",
+//             url: "https://www.delta.exchange/?code=GOKULJI",
+//           })
+//           .row({
+//             text: "✅ Step 2) Join CRYPTO VIP",
+//             url: "https://t.me/dilsecrypto7",
+//           });
+//         break;
+
+//       default:
+//         return res
+//           .status(400)
+//           .json({ message: "Invalid template selected." });
+//     }
+
+//     // 🚀 Send to all selected channels
+//     for (const chatId of targetChannelIds) {
+//       try {
+//         await bot.api.sendPhoto(chatId, imageUrl, {
+//           caption,
+//           parse_mode: "HTML",
+//           reply_markup: inlineKeyboard,
+//         });
+//         console.log(` Sent ${template} to ${chatId}`);
+//       } catch (err) {
+//         console.error(
+//           `❌ Failed to send ${template} to ${chatId}:`,
+//           err.response?.description || err.message
+//         );
+//       }
+//     }
+
+//     res.json({ message: `${template} sent successfully!` });
+//   } catch (err) {
+//     console.error("❌ /send-template error:", err);
+
+//     if (err?.message?.includes("File size too large")) {
+//       return res.status(400).json({
+//         message: "🖼️ Image too large! Please upload an image under 10 MB.",
+//       });
+//     }
+
+//     return res.status(500).json({
+//       message: err.message || "Something went wrong while sending template.",
+//     });
+//   }
+// });
+
+// // Add cron job for template 
+// async function sendTemplateDirect(templateName, channelKeys) {
+//   let caption = "";
+//   let imageUrl = "";
+//   let inlineKeyboard = new InlineKeyboard();
+
+//   switch (templateName) {
+//     case "template2":
+//       caption = `<b>AI Scalper Bot is ACTIVE NOW!! Make Sure you are logged in for Smooth Trading Experience!</b>\n\nNext TRADING PLAN is ready 🔥 🔥 Be ready for AUTO-Trading!\nJust follow 2 steps! 👇`;
+//       imageUrl =
+//         "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/CONNECT+YOUR+BROKER-+premium.png";
+//       inlineKeyboard
+//         .row({
+//           text: "📌 Step 1) Open Dhan A/c",
+//           url: "https://invite.dhan.co/?join=GOKULJI",
+//         })
+//         .row({
+//           text: "✅ Step 2) Connect Your Broker",
+//           url: "https://t.me/Auto_Trade_VIP_Bot?start=join",
+//         });
+//       break;
+//       case "template1":
+//         caption = `<b>Get Ready Traders! Next HERO ZERO Trading Plan is ready!</b>\nI am NOW adding new Traders in AI Scalping BOT! 👇👇`;
+//         imageUrl =
+//           "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/photo_2025-10-01_12-32-34.jpg";
+//         inlineKeyboard
+//           .row({
+//             text: "❤️ Step 1) Join VIP Group",
+//             url: "https://www.dilsetrader.in/subscriptions/telegram-bot?code=INTRADAY",
+//           })
+//           .row({
+//             text: "✅ Step 2) Open Dhan A/c",
+//             url: "https://invite.dhan.co/?join=GOKULJI",
+//           })
+//           .row({
+//             text: "📌 Step 3) Connect Algo",
+//             url: "https://t.me/Auto_Trade_VIP_Bot?start=join",
+//           });
+//         break;
+
+//         case "template4":
+//         caption = `<b>CRYPTO LIVE Trade is ACTIVATED!</b>📌 \n\n Follow these 2 Steps! 👇`;
+//         imageUrl =
+//           "https://algotradingbucketassest.s3.ap-south-1.amazonaws.com/DSTBOT-Folder/(1920+x+1080)+CRYPTO+VIP+Start+Today+Girl.png";
+//         inlineKeyboard
+//           .row({
+//             text: "📌Step 1) Open DELTA A/c ",
+//             url: "https://www.delta.exchange/?code=GOKULJI",
+//           })
+//           .row({
+//             text: "✅ Step 2) Join CRYPTO VIP",
+//             url: "https://t.me/dilsecrypto7",
+//           });
+//         break;
+
+//     default:
+//       console.log(`⚠️ Template "${templateName}" not supported for auto scheduler`);
+//       return;
+//   }
+
+//   const targetChannelIds = channelKeys.map((ch) => channelMap[ch]).filter(Boolean);
+//   if (!targetChannelIds.length) {
+//     console.log(`⚠️ No valid channel IDs found for ${templateName}`);
+//     return;
+//   }
+
+//   for (const chatId of targetChannelIds) {
+//     try {
+//       await bot.api.sendPhoto(chatId, imageUrl, {
+//         caption,
+//         parse_mode: "HTML",
+//         reply_markup: inlineKeyboard,
+//       });
+//       console.log(`✅ Auto-sent ${templateName} to ${chatId}`);
+//     } catch (err) {
+//       console.error(`❌ Auto-send failed for ${chatId}:`, err.response?.description || err.message);
+//     }
+//   }
+// }
+
+// cron.schedule(
+//   "0 18 * * 0-4", 
+//   async () => {
+//     console.log("⏰ [Scheduler Triggered] Sending Template 2 (18:00 IST)");
+//     console.log(cron.schedule)
+//     try {
+//       await sendTemplateDirect("template2", ["STOCK_OPTION_VIP", "PERMIUM_DIL_SE_TRADER","MCX_COMM_TRADING","ALGO_TRADING_VIP_PLAN","BTST_VIP_PERMIUM_PLAN","INTRADAY_TRADING_PERMIUM_GROUP","ALGO_VIP_GROUP","EQUITY_STOCK_INTRADAY_SWING","PROD_MCX"]);
+//       // await sendTemplateDirect("template2", ["PROD_MCX"]);
+//       console.log("✅ [Scheduler] Template 2 sent successfully!");
+//     } catch (err) {
+//       console.error(
+//         "❌ [Scheduler] Failed to send Template 2:",
+//         err.response?.description || err.message
+//       );
+//     }
+//   },
+//   { timezone: "Asia/Kolkata" }
+// );
+
+// cron.schedule(
+//   "0 18 * * *", // → 10:30 AM daily
+//   async () => {
+//     console.log("⏰ [Scheduler Triggered] Sending Template 1 (10:30 AM IST)");
+//     try {
+//       await sendTemplateDirect("template1", [
+//         "main",
+//         "PROD_MCX",
+//       ]);
+//       console.log("✅ [Scheduler] Template 1 sent successfully!");
+//     } catch (err) {
+//       console.error(
+//         "❌ [Scheduler] Failed to send Template 1:",
+//         err.response?.description || err.message
+//       );
+//     }
+//   },
+//   { timezone: "Asia/Kolkata" }
+// );
+
+// cron.schedule(
+//   "0 20 * * 0-5", // → 10:30 AM daily
+//   async () => {
+//     console.log("⏰ [Scheduler Triggered] Sending Template 4 (10:30 AM IST)");
+//     try {
+//       await sendTemplateDirect("template4", [
+//         "main",
+//         "DIL_SE_TRADER_CRYPTO",
+//         "PROD_MCX",
+//       ]);
+//       console.log("✅ [Scheduler] Template 4 sent successfully!");
+//     } catch (err) {
+//       console.error(
+//         "❌ [Scheduler] Failed to send Template 4:",
+//         err.response?.description || err.message
+//       );
+//     }
+//   },
+//   { timezone: "Asia/Kolkata" }
+// );
+// //
+// // 🚀 Start Bot + Server
+// //
+// bot.start().then(() => console.log("🤖 Bot started successfully"));
+// app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
