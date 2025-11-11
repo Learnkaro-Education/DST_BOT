@@ -26,6 +26,7 @@ export const env ={
     DAILY_BTST: process.env.DAILY_BTST,
     PROD_MCX: process.env.PROD_MCX,
     CRYPTO_VIP: process.env.CRYPTO_VIP,
+    MCX_BY_GOKUL_CHHABRA: process.env.MCX_BY_GOKUL_CHHABRA,
     }
 };
 
