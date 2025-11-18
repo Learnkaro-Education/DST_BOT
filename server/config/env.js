@@ -27,6 +27,7 @@ export const env ={
     PROD_MCX: process.env.PROD_MCX,
     CRYPTO_VIP: process.env.CRYPTO_VIP,
     MCX_BY_GOKUL_CHHABRA: process.env.MCX_BY_GOKUL_CHHABRA,
+    MONTHLY_EXPIRY: process.env.MONTHLY_EXPIRY,
     }
 };
 
