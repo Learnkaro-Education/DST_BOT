@@ -1,9 +1,13 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
 import { env } from "./config/env.js";
 import { bot } from "./bot/telegram.js";
 import sendMessageRouter from "./routes/sendMessage.js";
 import sendTemplateRouter from "./routes/sendTemplate.js";
+import channelRoutes from "./routes/Channel.js";
 import { startLocalScheduler, startCronJobs } from "./utils/scheduler.js";
 
 const app = express();
@@ -14,6 +18,7 @@ app.use(express.urlencoded({ limit: "1000mb", extended: true }));
 // Routes
 app.use(sendMessageRouter);
 app.use(sendTemplateRouter);
+app.use(channelRoutes);
 
 /// Scheduler + CRON
 startLocalScheduler(async (msg) => {
