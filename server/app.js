@@ -8,6 +8,7 @@ import { bot } from "./bot/telegram.js";
 import sendMessageRouter from "./routes/sendMessage.js";
 import sendTemplateRouter from "./routes/sendTemplate.js";
 import channelRoutes from "./routes/Channel.js";
+import linkButtonRoutes from "./routes/linkButtons.js";
 import { startLocalScheduler, startCronJobs } from "./utils/scheduler.js";
 
 const app = express();
@@ -19,6 +20,8 @@ app.use(express.urlencoded({ limit: "1000mb", extended: true }));
 app.use(sendMessageRouter);
 app.use(sendTemplateRouter);
 app.use(channelRoutes);
+app.use(linkButtonRoutes);
+
 
 /// Scheduler + CRON
 startLocalScheduler(async (msg) => {
