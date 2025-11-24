@@ -3,7 +3,7 @@
 
     const router = express.Router();
 
-    router.post("/add", async (req, res) => {
+    router.post("/link-buttons/add", async (req, res) => {
     try {
         const { text, url } = req.body;
 
@@ -14,10 +14,7 @@
         });
         }
 
-        const newBtn = await LinkButtons.create({
-        text,
-        url,
-        });
+        const newBtn = await LinkButtons.create({ text, url });
 
         return res.json({
         success: true,
@@ -30,7 +27,7 @@
     }
     });
 
-    router.get("/all", async (req, res) => {
+    router.get("/link-buttons/all", async (req, res) => {
     try {
         const buttons = await LinkButtons.findAll({
         order: [["id", "DESC"]],
@@ -46,7 +43,7 @@
     }
     });
 
-    router.delete("/delete/:id", async (req, res) => {
+    router.delete("/link-buttons/delete/:id", async (req, res) => {
     try {
         const { id } = req.params;
 
