@@ -158,24 +158,24 @@ export const startCronJobs = () => {
   );
 
   // Template 4 (10:30 AM IST, Sunday–Friday)
-  cron.schedule(
-    "0 20 * * 0-5", // 8pM daily
-    async () => {
-      console.log("⏰ [Scheduler Triggered] Sending Template 4 (10:30 AM IST)");
-      try {
-        await sendTemplateDirect("template4", [
-          "main",
-          "DIL_SE_TRADER_CRYPTO",
-          "PROD_MCX",
-        ]);
-        console.log("✅ [Scheduler] Template 4 sent successfully!");
-      } catch (err) {
-        console.error(
-          "❌ [Scheduler] Failed to send Template 4:",
-          err.response?.description || err.message
-        );
-      }
-    },
-    { timezone: "Asia/Kolkata" }
-  );
+  // cron.schedule(
+  //   "0 20 * * 0-5", // 8pM daily
+  //   async () => {
+  //     console.log("⏰ [Scheduler Triggered] Sending Template 4 (10:30 AM IST)");
+  //     try {
+  //       await sendTemplateDirect("template4", [
+  //         "main",
+  //         "DIL_SE_TRADER_CRYPTO",
+  //         "PROD_MCX",
+  //       ]);
+  //       console.log("✅ [Scheduler] Template 4 sent successfully!");
+  //     } catch (err) {
+  //       console.error(
+  //         "❌ [Scheduler] Failed to send Template 4:",
+  //         err.response?.description || err.message
+  //       );
+  //     }
+  //   },
+  //   { timezone: "Asia/Kolkata" }
+  // );
 };
