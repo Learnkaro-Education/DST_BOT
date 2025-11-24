@@ -87,13 +87,21 @@ router.post("/send-message", upload.single("image"), async (req, res) => {
       return res.json({ message: "Message scheduled successfully!" });
     }
 
-    for (const chatId of chatIds) {
+  for (const chatId of chatIds) {
+    if (imageUrl) {
       await bot.api.sendPhoto(chatId, imageUrl, {
         caption: sanitizedCaption,
         parse_mode: "HTML",
         reply_markup: inlineKeyboard,
       });
+    } else {
+      await bot.api.sendMessage(chatId, sanitizedCaption, {
+        parse_mode: "HTML",
+        reply_markup: inlineKeyboard,
+      });
     }
+  }
+
 
     res.json({ message: "Message sent successfully!" });
   } catch (err) {
