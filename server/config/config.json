@@ -2,7 +2,7 @@
   "development": {
     "username": "postgres",
     "password": "root",
-    "database": "DOT_BOT",
+    "database": "tg_msg_bot",
     "host": "127.0.0.1",
     "dialect": "postgres"
   },
@@ -14,8 +14,8 @@
     "dialect": "postgres"
   },
   "production": {
-    "username": "root",
-    "password": null,
+    "username": "postgres",
+    "password": "root",
     "database": "database_production",
     "host": "127.0.0.1",
     "dialect": "postgres"
