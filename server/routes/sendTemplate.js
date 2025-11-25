@@ -1,5 +1,5 @@
 import express from "express";
-import { sendTemplateDirect } from "../templates/index.js";
+import { sendTemplateDirect } from "../services/channelService.js";
 import { env } from "../config/env.js";
 
 const router = express.Router();
@@ -17,7 +17,6 @@ router.post("/send-template", async (req, res) => {
     } catch {
       selectedChannels = [channels];
     }
-
     await sendTemplateDirect(template, selectedChannels);
     res.json({ message: `${template} sent successfully!` });
   } catch (err) {

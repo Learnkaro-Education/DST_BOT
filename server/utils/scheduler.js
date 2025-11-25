@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import cron from "node-cron";
-import { sendTemplateDirect } from "../templates/index.js";
+import { sendTemplateDirect } from "../services/channelService.js";
 
 // ✅ Path for saving scheduled messages
 const scheduledPath = path.join(process.cwd(), "scheduled_messages.json");
