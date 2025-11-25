@@ -14,9 +14,9 @@
     "dialect": "postgres"
   },
   "production": {
-    "username": "root",
-    "password": null,
-    "database": "database_production",
+    "username": "postgres",
+    "password": "root",
+    "database": "tg_msg_bot",
     "host": "127.0.0.1",
     "dialect": "postgres"
   }
