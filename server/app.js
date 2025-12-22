@@ -9,6 +9,7 @@ import sendMessageRouter from "./routes/sendMessage.js";
 import sendTemplateRouter from "./routes/sendTemplate.js";
 import channelRoutes from "./routes/Channel.js";
 import linkButtonRoutes from "./routes/linkButtons.js";
+import scheduledRoutes from "./routes/scheduled.js";
 import { startLocalScheduler, startCronJobs } from "./utils/scheduler.js";
 
 const app = express();
@@ -21,6 +22,8 @@ app.use(sendMessageRouter);
 app.use(sendTemplateRouter);
 app.use(channelRoutes);
 app.use(linkButtonRoutes);
+app.use(scheduledRoutes);
+
 
 
 /// Scheduler + CRON
